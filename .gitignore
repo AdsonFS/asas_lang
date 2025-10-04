@@ -1,0 +1,3 @@
+# gitignore for c++ project with cmake
+build/
+.cache/
