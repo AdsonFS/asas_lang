@@ -1,6 +1,11 @@
-#include <stdio.h>
+#include "chunk.h"
+#include "debug.h"
 
 int main() {
-    printf("Hello, World!\n");
-    return 0;
+  Chunk chunk;
+  chunk.write(OP_RETURN);
+
+  DebugChunk::disassembleChunk(chunk, "test chunk");
+
+  return 0;
 }
