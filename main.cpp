@@ -1,8 +1,10 @@
 #include "chunk.h"
 #include "debug.h"
+#include "vm.h"
 
 int main() {
   Chunk chunk;
+  VM vm(chunk);
 
   int constantIndex = chunk.addConstant(1.2);
   chunk.write(OP_CONSTANT, 123);
@@ -15,6 +17,7 @@ int main() {
 
   chunk.write(OP_RETURN, 125);
 
+  vm.interpret();
   DebugChunk::disassembleChunk(chunk, "test chunk");
 
   return 0;

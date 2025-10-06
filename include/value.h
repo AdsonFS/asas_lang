@@ -12,8 +12,8 @@ inline void printValue(Value value) {
 
 class DataValue {
 public:
-  void write(const Value& value) { values_.push_back(value); }
-  const Value& getAt(size_t index) const { return values_[index]; }
+  void write(const Value &value) { values_.push_back(value); }
+  const Value &getAt(size_t index) const { return values_[index]; }
   size_t size() const { return values_.size(); }
 
 private:
