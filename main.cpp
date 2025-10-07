@@ -18,7 +18,7 @@ int main() {
   chunk.write(OP_RETURN, 125);
 
   vm.interpret();
-  DebugChunk::disassembleChunk(chunk, "test chunk");
+  // DebugChunk::disassembleChunk(chunk, "test chunk");
 
   return 0;
 }

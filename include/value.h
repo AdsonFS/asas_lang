@@ -6,7 +6,10 @@
 
 typedef double Value;
 
-inline void printValue(Value value) {
+inline void printValue(const char* left, const Value &value, const char* right) {
+  printf("%s%g%s", left, value, right);
+}
+inline void printValue(const Value &value) {
   printf("%g", value);
 }
 

@@ -1,6 +1,7 @@
 #ifndef asas_vm_h
 #define asas_vm_h
 
+#include <stack>
 #include "chunk.h"
 
 enum InterpretResult {
@@ -17,8 +18,10 @@ public:
 
 private:
   Chunk &chunk_;
+  std::stack<Value> stack_;
   const uint8_t *ip_;
   InterpretResult run();
+  void debugVM();
 };
 
 #endif // asas_vm_h
