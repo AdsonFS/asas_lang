@@ -15,7 +15,7 @@ TEST(ScannerTest, LiteralsTokens) {
     EXPECT_EQ(token.type, expType);
     EXPECT_STREQ(std::string(token.start, token.length).c_str(), expStr);
   }
-
+  EXPECT_EQ(scanner.scanToken().type, TOKEN_EOF);
 }
 
 TEST(ScannerTest, OperatorsTokens) {
@@ -37,6 +37,7 @@ TEST(ScannerTest, OperatorsTokens) {
     EXPECT_EQ(token.type, expType);
     EXPECT_STREQ(std::string(token.start, token.length).c_str(), expStr);
   }
+  EXPECT_EQ(scanner.scanToken().type, TOKEN_EOF);
 }
 
 TEST(ScannerTest, OperatorsTokensWithoutSpaces) {
@@ -56,6 +57,27 @@ TEST(ScannerTest, OperatorsTokensWithoutSpaces) {
     EXPECT_EQ(token.type, expType);
     EXPECT_STREQ(std::string(token.start, token.length).c_str(), expStr);
   }
+  EXPECT_EQ(scanner.scanToken().type, TOKEN_EOF);
 }
 
-
+TEST(ScannerTest, KeywordsTokens) {
+  const char *source =
+      "and class else false for fun if notkeyword nil or print return super this true var while";
+  Scanner scanner(source);
+  std::vector<std::pair<TokenType, const char*>> expectedTokens = {
+      {TOKEN_AND, "and"},       {TOKEN_CLASS, "class"},
+      {TOKEN_ELSE, "else"},     {TOKEN_FALSE, "false"},
+      {TOKEN_FOR, "for"},       {TOKEN_FUN, "fun"},
+      {TOKEN_IF, "if"},         {TOKEN_IDENTIFIER, "notkeyword"},
+      {TOKEN_NIL, "nil"},       {TOKEN_OR, "or"},
+      {TOKEN_PRINT, "print"},   {TOKEN_RETURN, "return"},
+      {TOKEN_SUPER, "super"}, {TOKEN_THIS, "this"},
+      {TOKEN_TRUE, "true"},     {TOKEN_VAR, "var"},
+      {TOKEN_WHILE, "while"}};
+  for (const auto &[expType, expStr] : expectedTokens) {
+    Token token = scanner.scanToken();
+    EXPECT_EQ(token.type, expType);
+    EXPECT_STREQ(std::string(token.start, token.length).c_str(), expStr);
+  }
+  EXPECT_EQ(scanner.scanToken().type, TOKEN_EOF);
+}
