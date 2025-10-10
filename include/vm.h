@@ -1,8 +1,8 @@
 #ifndef asas_vm_h
 #define asas_vm_h
 
-#include <stack>
 #include "chunk.h"
+#include <stack>
 
 enum InterpretResult {
   INTERPRET_OK,
@@ -12,6 +12,7 @@ enum InterpretResult {
 
 class VM {
 public:
+  VM() : chunk_(*(new Chunk())), ip_(nullptr) {}
   VM(Chunk &chunk) : chunk_(chunk), ip_(chunk.getCode().data()) {}
   const uint8_t readByte() { return *ip_++; }
   InterpretResult interpret();
@@ -21,6 +22,17 @@ private:
   std::stack<Value> stack_;
   const uint8_t *ip_;
   InterpretResult run();
+  void push(const Value &value) { stack_.push(value); }
+  Value pop() {
+    Value value = stack_.top();
+    stack_.pop();
+    return value;
+  }
+  template <typename T> void binaryOp(T op) {
+    Value b = pop();
+    Value a = pop();
+    push(op(a, b));
+  }
   void debugVM();
 };
 

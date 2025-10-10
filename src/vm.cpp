@@ -1,6 +1,7 @@
 #include "vm.h"
 #include "chunk.h"
 #include "debug.h"
+#include "compiler.h"
 
 InterpretResult VM::interpret() {
   ip_ = chunk_.getCode().data();
@@ -13,11 +14,6 @@ InterpretResult VM::run() {
   auto readConstant = [this, &readByte]() {
     return chunk_.getConstantAt(readByte());
   };
-  auto pop_stack = [&stack = stack_]() {
-    Value value = stack.top();
-    stack.pop();
-    return value;
-  };
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -28,13 +24,27 @@ InterpretResult VM::run() {
     switch (instruction = readByte()) {
     case OP_CONSTANT: {
       Value constant = readConstant();
-      stack_.push(constant);
+      push(constant);
       break;
     }
-    case OP_RETURN: {
-      printValue("-> ", pop_stack(), "\n");
+    case OP_ADD:
+      binaryOp([](const Value &a, const Value &b) { return a + b; });
+      break;
+    case OP_SUBTRACT:
+      binaryOp([](const Value &a, const Value &b) { return a - b; });
+      break;
+    case OP_MULTIPLY:
+      binaryOp([](const Value &a, const Value &b) { return a * b; });
+      break;
+    case OP_DIVIDE:
+      binaryOp([](const Value &a, const Value &b) { return a / b; });
+      break;
+    case OP_NEGATE:
+      push(-pop());
+      break;
+    case OP_RETURN:
+      printValue("-> ", pop(), "\n");
       return INTERPRET_OK;
-    }
     }
   }
 }

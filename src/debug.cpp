@@ -19,13 +19,25 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   printf("%04d ", offset);
   bool isSameLine =
       (offset > 0 && chunk.getLineAt(offset) == chunk.getLineAt(offset - 1));
-  if (isSameLine) printf("   | ");
-  else printf("%4d ", chunk.getLineAt(offset));
+  if (isSameLine)
+    printf("   | ");
+  else
+    printf("%4d ", chunk.getLineAt(offset));
 
   uint8_t instruction = chunk.getCode()[offset];
   switch (instruction) {
   case OP_CONSTANT:
     return DebugChunk::constantInstruction("OP_CONSTANT", chunk, offset);
+  case OP_ADD:
+    return DebugChunk::simpleInstruction("OP_ADD", offset);
+  case OP_SUBTRACT:
+    return DebugChunk::simpleInstruction("OP_SUBTRACT", offset);
+  case OP_MULTIPLY:
+    return DebugChunk::simpleInstruction("OP_MULTIPLY", offset);
+  case OP_DIVIDE:
+    return DebugChunk::simpleInstruction("OP_DIVIDE", offset);
+  case OP_NEGATE:
+    return DebugChunk::simpleInstruction("OP_NEGATE", offset);
   case OP_RETURN:
     return DebugChunk::simpleInstruction("OP_RETURN", offset);
   default:
@@ -39,7 +51,8 @@ int DebugChunk::simpleInstruction(const char *name, int offset) {
   return offset + 1;
 }
 
-int DebugChunk::constantInstruction(const char *name, const Chunk &chunk, int offset) {
+int DebugChunk::constantInstruction(const char *name, const Chunk &chunk,
+                                    int offset) {
   uint8_t constant = chunk.getChunkAt(offset + 1);
   printf("%-16s %4d '", name, constant);
   printValue(chunk.getConstantAt(constant));
