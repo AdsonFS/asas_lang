@@ -40,14 +40,17 @@ static void runFile(const std::string &path) {
   std::cout << "Running file: " << path << std::endl;
   std::string source = readFile(path);
 
-  Compiler::compile(source.c_str());
-  // InterpretResult result = interpret(source.c_str());
 
-  // if (result == INTERPRET_COMPILE_ERROR) std::exit(65);
-  // if (result == INTERPRET_RUNTIME_ERROR) std::exit(70);
+  // Compiler::compile(source.c_str());
+  VM vm;
+  InterpretResult result = vm.interpret(source.c_str());
+
+  if (result == INTERPRET_COMPILE_ERROR) std::exit(65);
+  if (result == INTERPRET_RUNTIME_ERROR) std::exit(70);
 }
 
 int main(int argc, const char *argv[]) {
+  runFile("example/main.as");
   if (argc == 1)
     repl();
   else if (argc == 2)

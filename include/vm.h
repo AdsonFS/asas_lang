@@ -14,8 +14,7 @@ class VM {
 public:
   VM() : chunk_(*(new Chunk())), ip_(nullptr) {}
   VM(Chunk &chunk) : chunk_(chunk), ip_(chunk.getCode().data()) {}
-  const uint8_t readByte() { return *ip_++; }
-  InterpretResult interpret();
+  InterpretResult interpret(const char *source);
 
 private:
   Chunk &chunk_;
@@ -23,6 +22,7 @@ private:
   const uint8_t *ip_;
   InterpretResult run();
   void push(const Value &value) { stack_.push(value); }
+  uint8_t readByte() { return *ip_++; }
   Value pop() {
     Value value = stack_.top();
     stack_.pop();

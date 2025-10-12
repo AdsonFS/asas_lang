@@ -1,6 +1,7 @@
 #ifndef asas_scanner_h
 #define asas_scanner_h
 
+#define TOKEN_COUNT 40
 enum TokenType {
   // Single-character tokens.
   TOKEN_LEFT_PAREN,

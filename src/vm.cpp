@@ -2,10 +2,13 @@
 #include "chunk.h"
 #include "debug.h"
 #include "compiler.h"
+#include <algorithm>
 
-InterpretResult VM::interpret() {
+InterpretResult VM::interpret(const char *source) {
+  Compiler compiler(source, chunk_);
+  if (!compiler.compile())
+    return INTERPRET_COMPILE_ERROR;
   ip_ = chunk_.getCode().data();
-
   return run();
 }
 
@@ -52,18 +55,20 @@ InterpretResult VM::run() {
 void VM::debugVM() {
   printf("\033[1;32m");
   printf("          ");
-  std::stack<Value> tempStack = stack_;
-  std::stack<Value> reverseStack;
-  while (!tempStack.empty()) {
-    reverseStack.push(tempStack.top());
-    tempStack.pop();
-  }
-  while (!reverseStack.empty()) {
-    printValue("[ ", reverseStack.top(), " ]");
-    reverseStack.pop();
-  }
+  // std::stack<Value> tempStack = stack_;
+  // std::vector<Value> reverseStack;
+  // printf("          y");
+  // while (!tempStack.empty()) {
+  //   reverseStack.push_back(tempStack.top());
+  //   tempStack.pop();
+  // }
+  // std::reverse(reverseStack.begin(), reverseStack.end());
+  // for (const Value &value : reverseStack) {
+  //   printf(" ");
+  //   printValue(value);
+  // }
   printf("\n");
-
+  //
   int offset = static_cast<int>(ip_ - chunk_.getCode().data());
   DebugChunk::disassembleInstruction(chunk_, offset);
 }
