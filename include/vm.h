@@ -21,6 +21,7 @@ private:
   std::stack<Value> stack_;
   const uint8_t *ip_;
   InterpretResult run();
+
   void push(const Value &value) { stack_.push(value); }
   uint8_t readByte() { return *ip_++; }
   Value pop() {
@@ -28,11 +29,16 @@ private:
     stack_.pop();
     return value;
   }
-  template <typename T> void binaryOp(T op) {
-    Value b = pop();
-    Value a = pop();
-    push(op(a, b));
-  }
+
+  Value runtimeError(const char *format, ...);
+  void opNegate();
+  void opAdd();
+  void opSubtract();
+  void opMultiply();
+  void opDivide();
+  void opNot();
+
+
   void debugVM();
 };
 

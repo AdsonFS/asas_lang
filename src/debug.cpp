@@ -28,6 +28,12 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   switch (instruction) {
   case OP_CONSTANT:
     return DebugChunk::constantInstruction("OP_CONSTANT", chunk, offset);
+  case OP_NIL:
+    return DebugChunk::simpleInstruction("OP_NIL", offset);
+  case OP_TRUE:
+    return DebugChunk::simpleInstruction("OP_TRUE", offset);
+  case OP_FALSE:
+    return DebugChunk::simpleInstruction("OP_FALSE", offset);
   case OP_ADD:
     return DebugChunk::simpleInstruction("OP_ADD", offset);
   case OP_SUBTRACT:
@@ -36,6 +42,8 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
     return DebugChunk::simpleInstruction("OP_MULTIPLY", offset);
   case OP_DIVIDE:
     return DebugChunk::simpleInstruction("OP_DIVIDE", offset);
+  case OP_NOT:
+    return DebugChunk::simpleInstruction("OP_NOT", offset);
   case OP_NEGATE:
     return DebugChunk::simpleInstruction("OP_NEGATE", offset);
   case OP_RETURN:

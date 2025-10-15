@@ -3,14 +3,29 @@
 
 #include "common.h"
 #include <cstdio>
+#include <iostream>
+#include <variant>
+#include <type_traits>
 
-typedef double Value;
+using Value = std::variant<std::monostate, bool, double>;
+
+inline void printValue(const Value &value) {
+  std::visit([](auto &&v) {
+    using V = std::decay_t<decltype(v)>;
+    if constexpr (std::is_same_v<V, std::monostate>)
+      printf("nil");
+    else if constexpr (std::is_same_v<V, bool>)
+      printf("%s", v ? "true" : "false");
+    else if constexpr (std::is_same_v<V, double>)
+      printf("%.2f", v);
+    else printf("%g", v);
+  }, value);
+}
 
 inline void printValue(const char* left, const Value &value, const char* right) {
-  printf("%s%g%s", left, value, right);
-}
-inline void printValue(const Value &value) {
-  printf("%g", value);
+  printf("%s", left);
+  printValue(value);
+  printf("%s", right);
 }
 
 class DataValue {

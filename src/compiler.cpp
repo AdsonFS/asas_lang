@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include "chunk.h"
 #include "stdio.h"
 
 #include "parse_rule.h"
@@ -82,6 +83,15 @@ void Compiler::parsePrecedence(Precedence precedence) {
   }
 }
 
+void Compiler::literal() {
+  switch (parser_.previous.type) {
+  case TOKEN_FALSE: emitByte(OP_FALSE); break;
+  case TOKEN_NIL: emitByte(OP_NIL); break;
+  case TOKEN_TRUE: emitByte(OP_TRUE); break;
+  default: return; // Unreachable.
+  }
+}
+
 void Compiler::number() {
   double value = strtod(parser_.previous.start, nullptr);
   emitBytes(OP_CONSTANT, chunk_.addConstant(value));
@@ -110,6 +120,7 @@ void Compiler::unary() {
   // Emit the operator instruction.
   switch (operatorType) {
   case TOKEN_MINUS: emitByte(OP_NEGATE); break;
+  case TOKEN_BANG: emitByte(OP_NOT); break;
   default: return; // Unreachable.
   }
 }

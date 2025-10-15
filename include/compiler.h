@@ -39,6 +39,7 @@ public:
   void number();
   void unary();
   void binary();
+  void literal();
 
 private:
   Chunk &chunk_;

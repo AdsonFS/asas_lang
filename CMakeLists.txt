@@ -54,5 +54,5 @@ endif()
 
 # Habilita testes
 enable_testing()
-add_subdirectory(tests OPTIONAL)
+add_subdirectory(tests)
 

@@ -18,8 +18,8 @@ static void repl() {
       std::cout << "\n";
       break;
     }
-
-    // interpret(line.c_str());
+    VM vm;
+    InterpretResult result = vm.interpret(line.c_str());
   }
 }
 
@@ -51,6 +51,7 @@ static void runFile(const std::string &path) {
 
 int main(int argc, const char *argv[]) {
   runFile("example/main.as");
+  return 0;
   if (argc == 1)
     repl();
   else if (argc == 2)

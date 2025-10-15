@@ -2,7 +2,7 @@
 #include "chunk.h"
 #include "debug.h"
 #include "compiler.h"
-#include <algorithm>
+#include <cstdarg>
 
 InterpretResult VM::interpret(const char *source) {
   Compiler compiler(source, chunk_);
@@ -20,31 +20,20 @@ InterpretResult VM::run() {
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
-    debugVM();
+    // debugVM();
 #endif
-
     uint8_t instruction;
     switch (instruction = readByte()) {
-    case OP_CONSTANT: {
-      Value constant = readConstant();
-      push(constant);
-      break;
-    }
-    case OP_ADD:
-      binaryOp([](const Value &a, const Value &b) { return a + b; });
-      break;
-    case OP_SUBTRACT:
-      binaryOp([](const Value &a, const Value &b) { return a - b; });
-      break;
-    case OP_MULTIPLY:
-      binaryOp([](const Value &a, const Value &b) { return a * b; });
-      break;
-    case OP_DIVIDE:
-      binaryOp([](const Value &a, const Value &b) { return a / b; });
-      break;
-    case OP_NEGATE:
-      push(-pop());
-      break;
+    case OP_CONSTANT: push(readConstant()); break;
+    case OP_NIL: push(std::monostate{}); break;
+    case OP_TRUE: push(true); break;
+    case OP_FALSE: push(false); break;
+    case OP_ADD: opAdd(); break;
+    case OP_SUBTRACT: opSubtract(); break;
+    case OP_MULTIPLY: opMultiply(); break;
+    case OP_DIVIDE: opDivide(); break;
+    case OP_NOT: opNot(); break;
+    case OP_NEGATE: opNegate(); break;
     case OP_RETURN:
       printValue("-> ", pop(), "\n");
       return INTERPRET_OK;
@@ -71,4 +60,18 @@ void VM::debugVM() {
   //
   int offset = static_cast<int>(ip_ - chunk_.getCode().data());
   DebugChunk::disassembleInstruction(chunk_, offset);
+}
+
+Value VM::runtimeError(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fputs("\n", stderr);
+
+  size_t instruction = static_cast<size_t>(ip_ - chunk_.getCode().data()) - 1;
+  int line = chunk_.getLineAt(instruction);
+  fprintf(stderr, "[line %d] in script\n", line);
+  stack_ = std::stack<Value>();
+  return std::monostate();
 }
