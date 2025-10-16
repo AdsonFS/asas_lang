@@ -37,7 +37,6 @@ static std::string readFile(const std::string &path) {
 }
 
 static void runFile(const std::string &path) {
-  std::cout << "Running file: " << path << std::endl;
   std::string source = readFile(path);
 
 
@@ -50,6 +49,7 @@ static void runFile(const std::string &path) {
 }
 
 int main(int argc, const char *argv[]) {
+  // repl();
   runFile("example/main.as");
   return 0;
   if (argc == 1)

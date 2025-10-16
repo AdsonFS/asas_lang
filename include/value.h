@@ -6,8 +6,9 @@
 #include <iostream>
 #include <variant>
 #include <type_traits>
+#include "object.h"
 
-using Value = std::variant<std::monostate, bool, double>;
+using Value = std::variant<std::monostate, bool, double, AsasObject*>;
 
 inline void printValue(const Value &value) {
   std::visit([](auto &&v) {
@@ -18,6 +19,14 @@ inline void printValue(const Value &value) {
       printf("%s", v ? "true" : "false");
     else if constexpr (std::is_same_v<V, double>)
       printf("%.2f", v);
+    // print asasString
+    else if constexpr (std::is_same_v<V, AsasObject*>) {
+      AsasString* strObj = dynamic_cast<AsasString*>(v);
+      if (strObj != nullptr)
+        printf("%s", strObj->getData());
+      else
+        printf("Object");
+    }
     else printf("%g", v);
   }, value);
 }

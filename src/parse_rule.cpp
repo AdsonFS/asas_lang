@@ -1,4 +1,5 @@
 #include "parse_rule.h"
+#include "compiler.h"
 
 ParseRule ParseRule::rules[] = {
   [TOKEN_LEFT_PAREN]    = {&Compiler::grouping, NULL,   PREC_NONE},
@@ -12,16 +13,16 @@ ParseRule ParseRule::rules[] = {
   [TOKEN_SEMICOLON]     = {NULL,     NULL,   PREC_NONE},
   [TOKEN_SLASH]         = {NULL,     &Compiler::binary, PREC_FACTOR},
   [TOKEN_STAR]          = {NULL,     &Compiler::binary, PREC_FACTOR},
-  [TOKEN_BANG]          = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_BANG_EQUAL]    = {&Compiler::unary,     NULL,   PREC_NONE},
+  [TOKEN_BANG]          = {&Compiler::unary,     NULL,   PREC_NONE},
+  [TOKEN_BANG_EQUAL]    = {NULL,     &Compiler::binary,   PREC_EQUALITY},
   [TOKEN_EQUAL]         = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_EQUAL_EQUAL]   = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_GREATER]       = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_GREATER_EQUAL] = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_LESS]          = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_LESS_EQUAL]    = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_EQUAL_EQUAL]   = {NULL,     &Compiler::binary,   PREC_EQUALITY},
+  [TOKEN_GREATER]       = {NULL,     &Compiler::binary,   PREC_COMPARISON},
+  [TOKEN_GREATER_EQUAL] = {NULL,     &Compiler::binary,   PREC_COMPARISON},
+  [TOKEN_LESS]          = {NULL,     &Compiler::binary,   PREC_COMPARISON},
+  [TOKEN_LESS_EQUAL]    = {NULL,     &Compiler::binary,   PREC_COMPARISON},
   [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_STRING]        = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_STRING]        = {&Compiler::string,     NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {&Compiler::number,   NULL,   PREC_NONE},
   [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},

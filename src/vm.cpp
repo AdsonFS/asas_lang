@@ -20,7 +20,7 @@ InterpretResult VM::run() {
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
-    // debugVM();
+    debugVM();
 #endif
     uint8_t instruction;
     switch (instruction = readByte()) {
@@ -28,6 +28,9 @@ InterpretResult VM::run() {
     case OP_NIL: push(std::monostate{}); break;
     case OP_TRUE: push(true); break;
     case OP_FALSE: push(false); break;
+    case OP_EQUAL: opEqual(); break;
+    case OP_GREATER: opGreater(); break;
+    case OP_LESS: opLess(); break;
     case OP_ADD: opAdd(); break;
     case OP_SUBTRACT: opSubtract(); break;
     case OP_MULTIPLY: opMultiply(); break;
@@ -44,20 +47,18 @@ InterpretResult VM::run() {
 void VM::debugVM() {
   printf("\033[1;32m");
   printf("          ");
-  // std::stack<Value> tempStack = stack_;
-  // std::vector<Value> reverseStack;
-  // printf("          y");
-  // while (!tempStack.empty()) {
-  //   reverseStack.push_back(tempStack.top());
-  //   tempStack.pop();
-  // }
-  // std::reverse(reverseStack.begin(), reverseStack.end());
-  // for (const Value &value : reverseStack) {
-  //   printf(" ");
-  //   printValue(value);
-  // }
+  std::stack<Value> tempStack = stack_;
+  std::stack<Value> reverseStack;
+  while (!tempStack.empty()) {
+    reverseStack.push(tempStack.top());
+    tempStack.pop();
+  }
+  while (!reverseStack.empty()) {
+    printValue("[ ", reverseStack.top(), " ]");
+    reverseStack.pop();
+  }
   printf("\n");
-  //
+
   int offset = static_cast<int>(ip_ - chunk_.getCode().data());
   DebugChunk::disassembleInstruction(chunk_, offset);
 }

@@ -16,6 +16,10 @@ public:
   VM(Chunk &chunk) : chunk_(chunk), ip_(chunk.getCode().data()) {}
   InterpretResult interpret(const char *source);
 
+  ~VM() {
+    for (AsasObject* obj : allocatedObjects_)
+      delete obj;
+  }
 private:
   Chunk &chunk_;
   std::stack<Value> stack_;
@@ -31,15 +35,26 @@ private:
   }
 
   Value runtimeError(const char *format, ...);
-  void opNegate();
+  void opEqual();
+  void opGreater();
+  void opLess();
   void opAdd();
   void opSubtract();
   void opMultiply();
   void opDivide();
+  void opNegate();
   void opNot();
 
-
   void debugVM();
+
+  std::vector<AsasObject*> allocatedObjects_;
+  template<typename T, typename... Args>
+  T* allocateObject(Args&&... args) {
+    T* object = new T(std::forward<Args>(args)...);
+    allocatedObjects_.push_back(object);
+    return object;
+  }
+
 };
 
 #endif // asas_vm_h

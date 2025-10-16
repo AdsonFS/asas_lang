@@ -36,6 +36,7 @@ public:
 
   void expression();
   void grouping();
+  void string();
   void number();
   void unary();
   void binary();
@@ -43,7 +44,7 @@ public:
 
 private:
   Chunk &chunk_;
-  Chunk compilingChunk_;
+  Chunk &compilingChunk_;
   Scanner scanner_;
   Parser parser_;
 

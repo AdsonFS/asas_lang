@@ -5,6 +5,7 @@
 #include "parse_rule.h"
 #include "compiler.h"
 #include "scanner.h"
+#include "object.h"
 
 
 bool Compiler::compile() {
@@ -13,22 +14,6 @@ bool Compiler::compile() {
   consume(TOKEN_EOF, "Expect end of expression.");
   emitByte(OP_RETURN);
   return !parser_.hadError;
-
-
-  // [TODO] - Remember
-  // int line = 1;
-  // for (;;) {
-  //   Token token = scanner.scanToken();
-  //   if (token.line != line) {
-  //     printf("%4d ", token.line);
-  //     line = token.line;
-  //   } else printf("   | ");
-  //
-  //   printf("%2d '%.*s'\n", token.type, token.length, token.start);
-  //
-  //   if (token.type == TOKEN_EOF) return true;
-  // }
-  // return false;
 }
 
 void Compiler::advance() {
@@ -83,6 +68,13 @@ void Compiler::parsePrecedence(Precedence precedence) {
   }
 }
 
+void Compiler::string() {
+  // Trim the surrounding quotes.
+  std::string str(parser_.previous.start + 1, parser_.previous.length - 2);
+  AsasString* stringObj = new AsasString(str.c_str());
+  emitConstant(stringObj);
+}
+
 void Compiler::literal() {
   switch (parser_.previous.type) {
   case TOKEN_FALSE: emitByte(OP_FALSE); break;
@@ -131,6 +123,12 @@ void Compiler::binary() {
   parsePrecedence((Precedence)(rule->precedence + 1));
 
   switch (operatorType) {
+  case TOKEN_BANG_EQUAL: emitBytes(OP_EQUAL, OP_NOT); break;
+  case TOKEN_EQUAL_EQUAL: emitByte(OP_EQUAL); break;
+  case TOKEN_GREATER: emitByte(OP_GREATER); break;
+  case TOKEN_GREATER_EQUAL: emitBytes(OP_LESS, OP_NOT); break;
+  case TOKEN_LESS: emitByte(OP_LESS); break;
+  case TOKEN_LESS_EQUAL: emitBytes(OP_GREATER, OP_NOT); break;
   case TOKEN_PLUS: emitByte(OP_ADD); break;
   case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
   case TOKEN_STAR: emitByte(OP_MULTIPLY); break;

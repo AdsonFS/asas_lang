@@ -34,6 +34,12 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
     return DebugChunk::simpleInstruction("OP_TRUE", offset);
   case OP_FALSE:
     return DebugChunk::simpleInstruction("OP_FALSE", offset);
+  case OP_EQUAL:
+    return DebugChunk::simpleInstruction("OP_EQUAL", offset);
+  case OP_GREATER:
+    return DebugChunk::simpleInstruction("OP_GREATER", offset);
+  case OP_LESS:
+    return DebugChunk::simpleInstruction("OP_LESS", offset);
   case OP_ADD:
     return DebugChunk::simpleInstruction("OP_ADD", offset);
   case OP_SUBTRACT:
