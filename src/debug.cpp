@@ -26,34 +26,24 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
 
   uint8_t instruction = chunk.getCode()[offset];
   switch (instruction) {
-  case OP_CONSTANT:
-    return DebugChunk::constantInstruction("OP_CONSTANT", chunk, offset);
-  case OP_NIL:
-    return DebugChunk::simpleInstruction("OP_NIL", offset);
-  case OP_TRUE:
-    return DebugChunk::simpleInstruction("OP_TRUE", offset);
-  case OP_FALSE:
-    return DebugChunk::simpleInstruction("OP_FALSE", offset);
-  case OP_EQUAL:
-    return DebugChunk::simpleInstruction("OP_EQUAL", offset);
-  case OP_GREATER:
-    return DebugChunk::simpleInstruction("OP_GREATER", offset);
-  case OP_LESS:
-    return DebugChunk::simpleInstruction("OP_LESS", offset);
-  case OP_ADD:
-    return DebugChunk::simpleInstruction("OP_ADD", offset);
-  case OP_SUBTRACT:
-    return DebugChunk::simpleInstruction("OP_SUBTRACT", offset);
-  case OP_MULTIPLY:
-    return DebugChunk::simpleInstruction("OP_MULTIPLY", offset);
-  case OP_DIVIDE:
-    return DebugChunk::simpleInstruction("OP_DIVIDE", offset);
-  case OP_NOT:
-    return DebugChunk::simpleInstruction("OP_NOT", offset);
-  case OP_NEGATE:
-    return DebugChunk::simpleInstruction("OP_NEGATE", offset);
-  case OP_RETURN:
-    return DebugChunk::simpleInstruction("OP_RETURN", offset);
+  case OP_CONSTANT: return DebugChunk::constantInstruction("OP_CONSTANT", chunk, offset);
+  case OP_NIL: return DebugChunk::simpleInstruction("OP_NIL", offset);
+  case OP_TRUE: return DebugChunk::simpleInstruction("OP_TRUE", offset);
+  case OP_FALSE: return DebugChunk::simpleInstruction("OP_FALSE", offset);
+  case OP_POP: return DebugChunk::simpleInstruction("OP_POP", offset);
+  case OP_GET_GLOBAL: return DebugChunk::constantInstruction("OP_GET_GLOBAL", chunk, offset);
+  case OP_DEFINE_GLOBAL: return DebugChunk::constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
+  case OP_EQUAL: return DebugChunk::simpleInstruction("OP_EQUAL", offset);
+  case OP_GREATER: return DebugChunk::simpleInstruction("OP_GREATER", offset);
+  case OP_LESS: return DebugChunk::simpleInstruction("OP_LESS", offset);
+  case OP_ADD: return DebugChunk::simpleInstruction("OP_ADD", offset);
+  case OP_SUBTRACT: return DebugChunk::simpleInstruction("OP_SUBTRACT", offset);
+  case OP_MULTIPLY: return DebugChunk::simpleInstruction("OP_MULTIPLY", offset);
+  case OP_DIVIDE: return DebugChunk::simpleInstruction("OP_DIVIDE", offset);
+  case OP_NOT: return DebugChunk::simpleInstruction("OP_NOT", offset);
+  case OP_NEGATE: return DebugChunk::simpleInstruction("OP_NEGATE", offset);
+  case OP_PRINT: return DebugChunk::simpleInstruction("OP_PRINT", offset);
+  case OP_RETURN: return DebugChunk::simpleInstruction("OP_RETURN", offset);
   default:
     printf("Unknown opcode %d\n", instruction);
     return offset + 1;

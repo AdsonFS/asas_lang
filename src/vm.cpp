@@ -20,7 +20,7 @@ InterpretResult VM::run() {
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
-    debugVM();
+    // debugVM();
 #endif
     uint8_t instruction;
     switch (instruction = readByte()) {
@@ -28,6 +28,24 @@ InterpretResult VM::run() {
     case OP_NIL: push(std::monostate{}); break;
     case OP_TRUE: push(true); break;
     case OP_FALSE: push(false); break;
+    case OP_POP: pop(); break;
+    case OP_GET_GLOBAL: {
+      const Value& constant = readConstant();
+      AsasString* name = ValueHelper::convertToStringObj(constant);
+      auto it = globals_.find(name->getData());
+      if (it == globals_.end()) {
+        runtimeError("Undefined variable '%s'.", name->getData());
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      push(it->second);
+      break;
+    }
+    case OP_DEFINE_GLOBAL: {
+      const Value& constant = readConstant();
+      AsasString* value = ValueHelper::convertToStringObj(constant);
+      globals_[value->getData()] = pop();
+      break;
+    }
     case OP_EQUAL: opEqual(); break;
     case OP_GREATER: opGreater(); break;
     case OP_LESS: opLess(); break;
@@ -37,16 +55,15 @@ InterpretResult VM::run() {
     case OP_DIVIDE: opDivide(); break;
     case OP_NOT: opNot(); break;
     case OP_NEGATE: opNegate(); break;
-    case OP_RETURN:
-      printValue("-> ", pop(), "\n");
-      return INTERPRET_OK;
+    case OP_PRINT: printValue("-> ", pop(), "\n"); break;
+    case OP_RETURN: return INTERPRET_OK;
     }
   }
 }
 
 void VM::debugVM() {
   printf("\033[1;32m");
-  printf("          ");
+  printf("          STACK:");
   std::stack<Value> tempStack = stack_;
   std::stack<Value> reverseStack;
   while (!tempStack.empty()) {

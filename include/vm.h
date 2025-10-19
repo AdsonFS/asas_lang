@@ -3,6 +3,7 @@
 
 #include "chunk.h"
 #include <stack>
+#include <unordered_map>
 
 enum InterpretResult {
   INTERPRET_OK,
@@ -12,8 +13,8 @@ enum InterpretResult {
 
 class VM {
 public:
-  VM() : chunk_(*(new Chunk())), ip_(nullptr) {}
-  VM(Chunk &chunk) : chunk_(chunk), ip_(chunk.getCode().data()) {}
+  VM() : ip_(nullptr) {}
+  VM(Chunk chunk) : chunk_(chunk), ip_(chunk_.getCode().data()) {}
   InterpretResult interpret(const char *source);
 
   ~VM() {
@@ -21,8 +22,9 @@ public:
       delete obj;
   }
 private:
-  Chunk &chunk_;
+  Chunk chunk_;
   std::stack<Value> stack_;
+  std::unordered_map<std::string, Value> globals_;
   const uint8_t *ip_;
   InterpretResult run();
 
@@ -33,6 +35,7 @@ private:
     stack_.pop();
     return value;
   }
+  Value peek() { return stack_.top(); }
 
   Value runtimeError(const char *format, ...);
   void opEqual();

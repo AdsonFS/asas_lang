@@ -10,6 +10,19 @@
 
 using Value = std::variant<std::monostate, bool, double, AsasObject*>;
 
+class ValueHelper {
+public:
+  static AsasString* convertToStringObj(const Value &value) {
+    if (auto objPtr = std::get_if<AsasObject*>(&value)) {
+      return dynamic_cast<AsasString*>(*objPtr);
+    }
+    std::runtime_error("Value is not an AsasObject*");
+    return nullptr;
+  }
+
+
+};
+
 inline void printValue(const Value &value) {
   std::visit([](auto &&v) {
     using V = std::decay_t<decltype(v)>;
@@ -42,6 +55,13 @@ public:
   void write(const Value &value) { values_.push_back(value); }
   const Value &getAt(size_t index) const { return values_[index]; }
   size_t size() const { return values_.size(); }
+
+  ~DataValue() {
+    for (const Value &value : values_) {
+      if (auto objPtr = std::get_if<AsasObject*>(&value))
+        delete *objPtr;
+    }
+  }
 
 private:
   std::vector<Value> values_;

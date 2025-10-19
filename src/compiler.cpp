@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstdlib>
 #include "chunk.h"
 #include "stdio.h"
@@ -10,41 +11,86 @@
 
 bool Compiler::compile() {
   advance();
-  expression();
-  consume(TOKEN_EOF, "Expect end of expression.");
-  emitByte(OP_RETURN);
+  while (!match(TOKEN_EOF)) {
+    declaration();
+  }
+  endCompiler();
   return !parser_.hadError;
+  // expression();
+  // consume(TOKEN_EOF, "Expect end of expression.");
+  // emitByte(OP_RETURN);
+  // return !parser_.hadError;
 }
 
-void Compiler::advance() {
-  parser_.previous = parser_.current;
+void Compiler::declaration() {
+  if (match(TOKEN_VAR)) varDeclaration();
+  else statement();
 
-  for (;;) {
-    parser_.current = scanner_.scanToken();
-    if (parser_.current.type != TOKEN_ERROR) break;
+  if (parser_.panicMode) synchronize();
+}
 
-    errorAtCurrent(parser_.current.start);
+void Compiler::varDeclaration() {
+  uint8_t global = parseVariable("Expect variable name.");
+
+  if (match(TOKEN_EQUAL)) expression();
+  else emitByte(OP_NIL);
+
+  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+  defineVariable(global);
+}
+
+uint8_t Compiler::parseVariable(const char *errorMessage) {
+  consume(TOKEN_IDENTIFIER, errorMessage);
+  return identifierConstant(parser_.previous);
+}
+
+uint8_t Compiler::identifierConstant(const Token &name) {
+  return makeConstant(new AsasString(std::string(name.start, name.length).c_str()));
+}
+
+void Compiler::defineVariable(uint8_t global) {
+  emitBytes(OP_DEFINE_GLOBAL, global);
+}
+
+void Compiler::synchronize() {
+  parser_.panicMode = false;
+
+  while (parser_.current.type != TOKEN_EOF) {
+    if (parser_.previous.type == TOKEN_SEMICOLON) return;
+
+    switch (parser_.current.type) {
+    case TOKEN_CLASS:
+    case TOKEN_FUN:
+    case TOKEN_VAR:
+    case TOKEN_FOR:
+    case TOKEN_IF:
+    case TOKEN_WHILE:
+    case TOKEN_PRINT:
+    case TOKEN_RETURN:
+      return;
+    default:
+      ; // Do nothing.
+    }
+
+    advance();
   }
 }
 
-void Compiler::consume(TokenType type, const char *message) {
-  if (parser_.current.type == type) return advance();
-  errorAtCurrent(message);
+void Compiler::statement() {
+  if (match(TOKEN_PRINT)) printStatement();
+  else expressionStatement();
 }
 
-void Compiler::errorAt(const Token &token, const char *message) {
-  if (parser_.panicMode) return;
-  parser_.panicMode = true;
-  parser_.hadError = true;
-  fprintf(stderr, "[line %d] Error", token.line);
+void Compiler::printStatement() {
+  expression();
+  consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+  emitByte(OP_PRINT);
+}
 
-  if (token.type == TOKEN_EOF) fprintf(stderr, " at end");
-  else if (token.type == TOKEN_ERROR)
-    ; // nothing
-  else
-    printf(" at '%.*s'", token.length, token.start);
-
-  fprintf(stderr, ": %s\n", message);
+void Compiler::expressionStatement() {
+  expression();
+  consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+  emitByte(OP_POP);
 }
 
 void Compiler::expression() {
@@ -66,6 +112,15 @@ void Compiler::parsePrecedence(Precedence precedence) {
     ParseFn infixRule = ParseRule::getRule(parser_.previous.type)->infix;
     (this->*infixRule)();
   }
+}
+
+void Compiler::variable() {
+  namedVariable(parser_.previous);
+}
+
+void Compiler::namedVariable(const Token &name) {
+  uint8_t argument = identifierConstant(name);
+  emitBytes(OP_GET_GLOBAL, argument);
 }
 
 void Compiler::string() {
@@ -135,4 +190,30 @@ void Compiler::binary() {
   case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
   default: return; // Unreachable.
   }
+}
+
+void Compiler::advance() {
+  parser_.previous = parser_.current;
+
+  for (;;) {
+    parser_.current = scanner_.scanToken();
+    if (parser_.current.type != TOKEN_ERROR) break;
+
+    errorAtCurrent(parser_.current.start);
+  }
+}
+
+void Compiler::errorAt(const Token &token, const char *message) {
+  if (parser_.panicMode) return;
+  parser_.panicMode = true;
+  parser_.hadError = true;
+  fprintf(stderr, "[line %d] Error", token.line);
+
+  if (token.type == TOKEN_EOF) fprintf(stderr, " at end");
+  else if (token.type == TOKEN_ERROR)
+    ; // nothing
+  else
+    printf(" at '%.*s'", token.length, token.start);
+
+  fprintf(stderr, ": %s\n", message);
 }

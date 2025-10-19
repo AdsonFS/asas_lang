@@ -34,13 +34,22 @@ public:
       : chunk_(chunk), compilingChunk_(chunk), scanner_(source) {}
   bool compile();
 
+  void declaration();
+  void varDeclaration();
+
+  void statement();
+  void printStatement();
+  void expressionStatement();
+
   void expression();
   void grouping();
+  void variable();
   void string();
   void number();
   void unary();
   void binary();
   void literal();
+  void defineVariable(uint8_t global);
 
 private:
   Chunk &chunk_;
@@ -49,6 +58,11 @@ private:
   Parser parser_;
 
   Chunk &currentChunk() { return compilingChunk_; }
+
+  void synchronize();
+  uint8_t parseVariable(const char *errorMessage);
+  uint8_t identifierConstant(const Token &name);
+  void namedVariable(const Token &name);
 
   void endCompiler() { emitReturn(); }
   void emitReturn() { emitByte(OP_RETURN); }
@@ -61,7 +75,10 @@ private:
     emitByte(byte1); emitByte(byte2);
   }
   void advance();
-  void consume(TokenType type, const char *message);
+  void consume(TokenType type, const char *message) {
+    if (parser_.current.type == type) return advance();
+    errorAtCurrent(message);
+  }
   void errorAtCurrent(const char *message) {
     errorAt(parser_.current, message);
   }
@@ -71,6 +88,14 @@ private:
   }
 
   void parsePrecedence(Precedence precedence);
+  bool check(TokenType type) {
+    return parser_.current.type == type;
+  }
+  bool match(TokenType type) {
+    if (parser_.current.type != type) return false;
+    advance();
+    return true;
+  }
 };
 
 #endif // asas_compiler_h
