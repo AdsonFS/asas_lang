@@ -16,10 +16,6 @@ bool Compiler::compile() {
   }
   endCompiler();
   return !parser_.hadError;
-  // expression();
-  // consume(TOKEN_EOF, "Expect end of expression.");
-  // emitByte(OP_RETURN);
-  // return !parser_.hadError;
 }
 
 void Compiler::declaration() {
@@ -41,44 +37,58 @@ void Compiler::varDeclaration() {
 
 uint8_t Compiler::parseVariable(const char *errorMessage) {
   consume(TOKEN_IDENTIFIER, errorMessage);
+
+  declareVariable();
+  if (scopeDepth_) return 0;
+
   return identifierConstant(parser_.previous);
 }
+
+void Compiler::declareVariable() {
+  if (!scopeDepth_) return;
+
+  Token &name = parser_.previous;
+
+  for (int i = locals_.size() - 1; i >= 0; i--) {
+    LocalVariable &local = locals_[i];
+    if (local.depth != -1 && local.depth < scopeDepth_) break;
+
+    if (identifiersEqual(name, local.name))
+      error("Already a variable with this name in this scope.");
+  }
+
+  addLocal(name);
+}
+
+void Compiler::addLocal(const Token &name) {
+  locals_.push_back(LocalVariable{name, -1});
+};
 
 uint8_t Compiler::identifierConstant(const Token &name) {
   return makeConstant(new AsasString(std::string(name.start, name.length).c_str()));
 }
 
 void Compiler::defineVariable(uint8_t global) {
+  if (scopeDepth_) return void(locals_.back().depth = scopeDepth_);
   emitBytes(OP_DEFINE_GLOBAL, global);
-}
-
-void Compiler::synchronize() {
-  parser_.panicMode = false;
-
-  while (parser_.current.type != TOKEN_EOF) {
-    if (parser_.previous.type == TOKEN_SEMICOLON) return;
-
-    switch (parser_.current.type) {
-    case TOKEN_CLASS:
-    case TOKEN_FUN:
-    case TOKEN_VAR:
-    case TOKEN_FOR:
-    case TOKEN_IF:
-    case TOKEN_WHILE:
-    case TOKEN_PRINT:
-    case TOKEN_RETURN:
-      return;
-    default:
-      ; // Do nothing.
-    }
-
-    advance();
-  }
 }
 
 void Compiler::statement() {
   if (match(TOKEN_PRINT)) printStatement();
+  else if (match(TOKEN_LEFT_BRACE)) {
+    beginScope();
+    block();
+    endScope();
+  }
   else expressionStatement();
+}
+
+void Compiler::block() {
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    declaration();
+  }
+
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
 void Compiler::printStatement() {
@@ -105,32 +115,58 @@ void Compiler::parsePrecedence(Precedence precedence) {
     return;
   }
 
-  (this->*prefixRule)();
+  bool canAssign = precedence <= PREC_ASSIGNMENT;
+  (this->*prefixRule)(canAssign);
 
   while (precedence <= ParseRule::getRule(parser_.current.type)->precedence) {
     advance();
     ParseFn infixRule = ParseRule::getRule(parser_.previous.type)->infix;
-    (this->*infixRule)();
+    (this->*infixRule)(canAssign);
   }
 }
 
-void Compiler::variable() {
-  namedVariable(parser_.previous);
+void Compiler::variable(bool canAssign) {
+  namedVariable(parser_.previous, canAssign);
 }
 
-void Compiler::namedVariable(const Token &name) {
-  uint8_t argument = identifierConstant(name);
-  emitBytes(OP_GET_GLOBAL, argument);
+void Compiler::namedVariable(const Token &name, bool canAssign) {
+  uint8_t getOp, setOp;
+  int argumentIndex = resolveLocal(name);
+  if (argumentIndex != -1) {
+    getOp = OP_GET_LOCAL;
+    setOp = OP_SET_LOCAL;
+  } else {
+    argumentIndex = identifierConstant(name);
+    getOp = OP_GET_GLOBAL;
+    setOp = OP_SET_GLOBAL;
+  }
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    expression();
+    emitBytes(setOp, (uint8_t)argumentIndex);
+  } else emitBytes(getOp, (uint8_t)argumentIndex);
 }
 
-void Compiler::string() {
+void Compiler::string(bool) {
   // Trim the surrounding quotes.
   std::string str(parser_.previous.start + 1, parser_.previous.length - 2);
   AsasString* stringObj = new AsasString(str.c_str());
   emitConstant(stringObj);
 }
 
-void Compiler::literal() {
+int Compiler::resolveLocal(const Token &name) {
+  for (int i = locals_.size() - 1; i >= 0; i--)
+    if (locals_[i].depth != -1 && identifiersEqual(name, locals_[i].name)) {
+      if (locals_[i].depth == -1)
+        error("Can't read local variable in its own initializer.");
+
+      return i;
+    }
+
+  return -1;
+}
+
+void Compiler::literal(bool) {
   switch (parser_.previous.type) {
   case TOKEN_FALSE: emitByte(OP_FALSE); break;
   case TOKEN_NIL: emitByte(OP_NIL); break;
@@ -139,7 +175,7 @@ void Compiler::literal() {
   }
 }
 
-void Compiler::number() {
+void Compiler::number(bool) {
   double value = strtod(parser_.previous.start, nullptr);
   emitBytes(OP_CONSTANT, chunk_.addConstant(value));
 }
@@ -153,12 +189,12 @@ uint8_t Compiler::makeConstant(Value value) {
   return (uint8_t)constant;
 }
 
-void Compiler::grouping() {
+void Compiler::grouping(bool) {
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-void Compiler::unary() {
+void Compiler::unary(bool) {
   TokenType operatorType = parser_.previous.type;
 
   // Compile the operand.
@@ -172,7 +208,7 @@ void Compiler::unary() {
   }
 }
 
-void Compiler::binary() {
+void Compiler::binary(bool) {
   TokenType operatorType = parser_.previous.type;
   ParseRule *rule = ParseRule::getRule(operatorType);
   parsePrecedence((Precedence)(rule->precedence + 1));
@@ -216,4 +252,41 @@ void Compiler::errorAt(const Token &token, const char *message) {
     printf(" at '%.*s'", token.length, token.start);
 
   fprintf(stderr, ": %s\n", message);
+}
+
+void Compiler::beginScope() {
+  scopeDepth_++;
+}
+
+void Compiler::endScope() {
+  scopeDepth_--;
+
+  while (!locals_.empty() && locals_.back().depth > scopeDepth_) {
+    emitByte(OP_POP);
+    locals_.pop_back();
+  }
+}
+
+void Compiler::synchronize() {
+  parser_.panicMode = false;
+
+  while (parser_.current.type != TOKEN_EOF) {
+    if (parser_.previous.type == TOKEN_SEMICOLON) return;
+
+    switch (parser_.current.type) {
+    case TOKEN_CLASS:
+    case TOKEN_FUN:
+    case TOKEN_VAR:
+    case TOKEN_FOR:
+    case TOKEN_IF:
+    case TOKEN_WHILE:
+    case TOKEN_PRINT:
+    case TOKEN_RETURN:
+      return;
+    default:
+      ; // Do nothing.
+    }
+
+    advance();
+  }
 }

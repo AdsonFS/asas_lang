@@ -31,8 +31,11 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   case OP_TRUE: return DebugChunk::simpleInstruction("OP_TRUE", offset);
   case OP_FALSE: return DebugChunk::simpleInstruction("OP_FALSE", offset);
   case OP_POP: return DebugChunk::simpleInstruction("OP_POP", offset);
-  case OP_GET_GLOBAL: return DebugChunk::constantInstruction("OP_GET_GLOBAL", chunk, offset);
   case OP_DEFINE_GLOBAL: return DebugChunk::constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
+  case OP_GET_GLOBAL: return DebugChunk::constantInstruction("OP_GET_GLOBAL", chunk, offset);
+  case OP_SET_GLOBAL: return DebugChunk::constantInstruction("OP_SET_GLOBAL", chunk, offset);
+  case OP_GET_LOCAL: return DebugChunk::byteInstruction("OP_GET_LOCAL", chunk, offset);
+  case OP_SET_LOCAL: return DebugChunk::byteInstruction("OP_SET_LOCAL", chunk, offset);
   case OP_EQUAL: return DebugChunk::simpleInstruction("OP_EQUAL", offset);
   case OP_GREATER: return DebugChunk::simpleInstruction("OP_GREATER", offset);
   case OP_LESS: return DebugChunk::simpleInstruction("OP_LESS", offset);
@@ -61,5 +64,11 @@ int DebugChunk::constantInstruction(const char *name, const Chunk &chunk,
   printf("%-16s %4d '", name, constant);
   printValue(chunk.getConstantAt(constant));
   printf("'\n");
+  return offset + 2;
+}
+
+int DebugChunk::byteInstruction(const char *name, const Chunk &chunk, int offset) {
+  uint8_t slot = chunk.getChunkAt(offset + 1);
+  printf("%-16s %4d\n", name, slot);
   return offset + 2;
 }

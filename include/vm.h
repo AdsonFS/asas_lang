@@ -23,19 +23,19 @@ public:
   }
 private:
   Chunk chunk_;
-  std::stack<Value> stack_;
+  std::vector<Value> stack_;
   std::unordered_map<std::string, Value> globals_;
   const uint8_t *ip_;
   InterpretResult run();
 
-  void push(const Value &value) { stack_.push(value); }
+  void push(const Value &value) { stack_.push_back(value); }
   uint8_t readByte() { return *ip_++; }
   Value pop() {
-    Value value = stack_.top();
-    stack_.pop();
+    Value value = stack_.back();
+    stack_.pop_back();
     return value;
   }
-  Value peek() { return stack_.top(); }
+  Value peek() { return stack_.back(); }
 
   Value runtimeError(const char *format, ...);
   void opEqual();
@@ -57,7 +57,6 @@ private:
     allocatedObjects_.push_back(object);
     return object;
   }
-
 };
 
 #endif // asas_vm_h

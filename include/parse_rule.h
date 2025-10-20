@@ -3,7 +3,7 @@
 
 #include "compiler.h"
 
-typedef void (Compiler::*ParseFn)();
+typedef void (Compiler::*ParseFn)(bool canAssign);
 class ParseRule {
 public:
   ParseFn prefix;

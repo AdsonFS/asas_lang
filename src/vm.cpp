@@ -29,21 +29,40 @@ InterpretResult VM::run() {
     case OP_TRUE: push(true); break;
     case OP_FALSE: push(false); break;
     case OP_POP: pop(); break;
-    case OP_GET_GLOBAL: {
-      const Value& constant = readConstant();
-      AsasString* name = ValueHelper::convertToStringObj(constant);
-      auto it = globals_.find(name->getData());
-      if (it == globals_.end()) {
-        runtimeError("Undefined variable '%s'.", name->getData());
-        return INTERPRET_RUNTIME_ERROR;
-      }
-      push(it->second);
-      break;
-    }
     case OP_DEFINE_GLOBAL: {
       const Value& constant = readConstant();
       AsasString* value = ValueHelper::convertToStringObj(constant);
       globals_[value->getData()] = pop();
+      break;
+    }
+    case OP_GET_GLOBAL: {
+      const Value& constant = readConstant();
+      const char *variableName = ValueHelper::convertToStringObj(constant)->getData();
+      if (!globals_.contains(variableName)) {
+        runtimeError("Undefined variable '%s'.", variableName);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      push(globals_[variableName]);
+      break;
+    }
+    case OP_SET_GLOBAL: {
+      const Value& constant = readConstant();
+      const char *variableName = ValueHelper::convertToStringObj(constant)->getData();
+      if (!globals_.contains(variableName)) {
+        runtimeError("Undefined variable '%s'.", variableName);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      globals_[variableName] = peek();
+      break;
+    }
+    case OP_GET_LOCAL: {
+      uint8_t slot = readByte();
+      push(stack_[slot]);
+      break;
+    }
+    case OP_SET_LOCAL: {
+      uint8_t slot = readByte();
+      stack_[slot] = peek();
       break;
     }
     case OP_EQUAL: opEqual(); break;
@@ -64,16 +83,8 @@ InterpretResult VM::run() {
 void VM::debugVM() {
   printf("\033[1;32m");
   printf("          STACK:");
-  std::stack<Value> tempStack = stack_;
-  std::stack<Value> reverseStack;
-  while (!tempStack.empty()) {
-    reverseStack.push(tempStack.top());
-    tempStack.pop();
-  }
-  while (!reverseStack.empty()) {
-    printValue("[ ", reverseStack.top(), " ]");
-    reverseStack.pop();
-  }
+  for (const Value &value : stack_)
+    printValue(" [ ", value, " ]");
   printf("\n");
 
   int offset = static_cast<int>(ip_ - chunk_.getCode().data());
@@ -90,6 +101,6 @@ Value VM::runtimeError(const char *format, ...) {
   size_t instruction = static_cast<size_t>(ip_ - chunk_.getCode().data()) - 1;
   int line = chunk_.getLineAt(instruction);
   fprintf(stderr, "[line %d] in script\n", line);
-  stack_ = std::stack<Value>();
+  stack_ = std::vector<Value>();
   return std::monostate();
 }

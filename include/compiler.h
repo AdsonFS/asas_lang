@@ -18,6 +18,14 @@ enum Precedence {
   PREC_PRIMARY
 };
 
+class LocalVariable {
+public:
+  LocalVariable(Token name, int depth)
+      : name(name), depth(depth) {}
+  Token name;
+  int depth;
+};
+
 class Parser {
 public:
   Parser() : current(), previous(), hadError(false), panicMode(false) {}
@@ -40,15 +48,19 @@ public:
   void statement();
   void printStatement();
   void expressionStatement();
+  void block();
+  void declareVariable();
+  void beginScope();
+  void endScope();
 
   void expression();
-  void grouping();
-  void variable();
-  void string();
-  void number();
-  void unary();
-  void binary();
-  void literal();
+  void grouping(bool canAssign);
+  void variable(bool canAssign);
+  void string(bool canAssign);
+  void number(bool canAssign);
+  void unary(bool canAssign);
+  void binary(bool canAssign);
+  void literal(bool canAssign);
   void defineVariable(uint8_t global);
 
 private:
@@ -57,12 +69,21 @@ private:
   Scanner scanner_;
   Parser parser_;
 
+  std::vector<LocalVariable> locals_;
+  int scopeDepth_ = 0;
+
+  void addLocal(const Token &name);
   Chunk &currentChunk() { return compilingChunk_; }
 
   void synchronize();
+  int resolveLocal(const Token &name);
+  static bool identifiersEqual(const Token &a, const Token &b) {
+    if (a.length != b.length) return false;
+    return std::strncmp(a.start, b.start, a.length) == 0;
+  }
   uint8_t parseVariable(const char *errorMessage);
   uint8_t identifierConstant(const Token &name);
-  void namedVariable(const Token &name);
+  void namedVariable(const Token &name, bool canAssign);
 
   void endCompiler() { emitReturn(); }
   void emitReturn() { emitByte(OP_RETURN); }

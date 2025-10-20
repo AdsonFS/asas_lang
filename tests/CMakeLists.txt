@@ -7,7 +7,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 # Add test executable
-file(GLOB SOURCE_TEST_FILES "*_test.cpp")
+file(GLOB SOURCE_TEST_FILES
+  "*_test.cpp"
+  "interpret/*_test.cpp"
+)
 add_executable(asas_tests ${SOURCE_TEST_FILES})
 
 # Link test executable against GoogleTest and asas_lib
