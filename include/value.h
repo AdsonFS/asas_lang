@@ -12,7 +12,7 @@ using Value = std::variant<std::monostate, bool, double, AsasObject*>;
 
 class ValueHelper {
 public:
-  static AsasString* convertToStringObj(const Value &value) {
+  static AsasString* toStringObj(const Value &value) {
     if (auto objPtr = std::get_if<AsasObject*>(&value)) {
       return dynamic_cast<AsasString*>(*objPtr);
     }
@@ -20,7 +20,7 @@ public:
     return nullptr;
   }
 
-  static bool convertToBool(const Value &value) {
+  static bool toBool(const Value &value) {
     if (auto boolPtr = std::get_if<bool>(&value)) {
       return *boolPtr;
     }
@@ -28,6 +28,11 @@ public:
     return false;
   }
 
+  static AsasString* tryParseToStringObj(const Value &value) {
+    if (auto objPtr = std::get_if<AsasObject*>(&value))
+      return dynamic_cast<AsasString*>(*objPtr);
+    return nullptr;
+  }
 
 };
 

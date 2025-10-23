@@ -34,13 +34,13 @@ InterpretResult VM::run() {
     case OP_POP: pop(); break;
     case OP_DEFINE_GLOBAL: {
       const Value& constant = readConstant();
-      AsasString* value = ValueHelper::convertToStringObj(constant);
+      AsasString* value = ValueHelper::toStringObj(constant);
       globals_[value->getData()] = pop();
       break;
     }
     case OP_GET_GLOBAL: {
       const Value& constant = readConstant();
-      const char *variableName = ValueHelper::convertToStringObj(constant)->getData();
+      const char *variableName = ValueHelper::toStringObj(constant)->getData();
       if (!globals_.contains(variableName)) {
         runtimeError("Undefined variable '%s'.", variableName);
         return INTERPRET_RUNTIME_ERROR;
@@ -50,7 +50,7 @@ InterpretResult VM::run() {
     }
     case OP_SET_GLOBAL: {
       const Value& constant = readConstant();
-      const char *variableName = ValueHelper::convertToStringObj(constant)->getData();
+      const char *variableName = ValueHelper::toStringObj(constant)->getData();
       if (!globals_.contains(variableName)) {
         runtimeError("Undefined variable '%s'.", variableName);
         return INTERPRET_RUNTIME_ERROR;
@@ -85,7 +85,7 @@ InterpretResult VM::run() {
     }
     case OP_JUMP_IF_FALSE: {
       uint16_t offset = readShort();
-      if (!ValueHelper::convertToBool(peek()))
+      if (!ValueHelper::toBool(peek()))
         ip_ += offset;
       break;
     }

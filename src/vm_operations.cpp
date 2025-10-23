@@ -62,6 +62,13 @@ void VM::opAdd() {
           return x + y;
         if constexpr (std::is_same_v<X, bool> && std::is_same_v<Y, bool>)
           return x || y;
+        if constexpr (std::is_same_v<X, AsasObject*> && std::is_same_v<Y, double>) {
+          AsasString* strX = dynamic_cast<AsasString*>(x);
+          if (strX != nullptr) {
+            std::string concatenated = std::string(strX->getData()) + std::to_string(y);
+            return allocateObject<AsasString>(concatenated.c_str());
+          }
+        }
         if constexpr (std::is_same_v<X, AsasObject*> && std::is_same_v<Y, AsasObject*>) {
           AsasString* strX = dynamic_cast<AsasString*>(x);
           AsasString* strY = dynamic_cast<AsasString*>(y);
