@@ -47,6 +47,9 @@ public:
 
   void statement();
   void printStatement();
+  void ifStatement();
+  void whileStatement();
+  void forStatement();
   void expressionStatement();
   void block();
   void declareVariable();
@@ -62,6 +65,8 @@ public:
   void binary(bool canAssign);
   void literal(bool canAssign);
   void defineVariable(uint8_t global);
+  void andOperator(bool canAssign);
+  void orOperator(bool canAssign);
 
 private:
   Chunk &chunk_;
@@ -75,6 +80,9 @@ private:
   void addLocal(const Token &name);
   Chunk &currentChunk() { return compilingChunk_; }
 
+  void emitLoop(int loopStart);
+  int emitJump(uint8_t instruction);
+  void patchJump(int offset);
   void synchronize();
   int resolveLocal(const Token &name);
   static bool identifiersEqual(const Token &a, const Token &b) {

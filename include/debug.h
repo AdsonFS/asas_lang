@@ -14,6 +14,7 @@ private:
   static int simpleInstruction(const char *name, int offset);
   static int constantInstruction(const char *name, const Chunk &chunk, int offset);
   static int byteInstruction(const char *name, const Chunk &chunk, int offset);
+  static int jumpInstruction(const char *name, int sign, const Chunk &chunk, int offset);
 };
 
 #endif // asas_debug_h

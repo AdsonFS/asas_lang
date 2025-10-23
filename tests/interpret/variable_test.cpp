@@ -9,11 +9,9 @@ TEST(VariableTest, SimpleGlobalVariableDeclaration) {
       "print x;\n"
       "print y;\n";
 
-  auto [result, output] = AsasFixture::runSource(source);
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
-  EXPECT_EQ(result, INTERPRET_OK);
   EXPECT_EQ(output, "-> 42.00\n-> 3.14\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, GlobalVariableDeclarationAndConcatenation) {
@@ -23,11 +21,9 @@ TEST(VariableTest, GlobalVariableDeclarationAndConcatenation) {
       "print name;\n"
       "print count;\n";
 
-  auto [result, output] = AsasFixture::runSource(source);
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
-  EXPECT_EQ(result, INTERPRET_OK);
   EXPECT_EQ(output, "-> asaslang\n-> 10.00\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, ConcatenationWithVariables) {
@@ -37,11 +33,9 @@ TEST(VariableTest, ConcatenationWithVariables) {
       "var message = part1 + part2;\n"
       "print message;\n";
 
-  auto [result, output] = AsasFixture::runSource(source);
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
-  EXPECT_EQ(result, INTERPRET_OK);
   EXPECT_EQ(output, "-> Hello, World!\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, VariableReassignment) {
@@ -51,11 +45,9 @@ TEST(VariableTest, VariableReassignment) {
       "x = 10;\n"
       "print x;\n";
 
-  auto [result, output] = AsasFixture::runSource(source);
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
-  EXPECT_EQ(result, INTERPRET_OK);
   EXPECT_EQ(output, "-> 5.00\n-> 10.00\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, BooleanVariableDeclarationAndUsage) {
@@ -65,11 +57,9 @@ TEST(VariableTest, BooleanVariableDeclarationAndUsage) {
       "flag = false;\n"
       "print flag;\n";
 
-  auto [result, output] = AsasFixture::runSource(source);
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
-  EXPECT_EQ(result, INTERPRET_OK);
   EXPECT_EQ(output, "-> true\n-> false\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, VariableScopeTest) {
@@ -83,11 +73,9 @@ TEST(VariableTest, VariableScopeTest) {
       "}\n"
       "print x;\n";
 
-  auto [result, output] = AsasFixture::runSource(source);
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
-  EXPECT_EQ(result, INTERPRET_OK);
   EXPECT_EQ(output, "-> 200.00\n-> 300.00\n-> 100.00\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, VariableShadowing) {
@@ -105,11 +93,9 @@ TEST(VariableTest, VariableShadowing) {
       "}\n"
       "print a;\n";
 
-  auto [result, output] = AsasFixture::runSource(source);
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
-  EXPECT_EQ(result, INTERPRET_OK);
   EXPECT_EQ(output, "-> 1.00\n-> 2.00\n-> 3.00\n-> 2.00\n-> 1.00\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, VariableUsageBeforeDeclaration) {
@@ -119,9 +105,7 @@ TEST(VariableTest, VariableUsageBeforeDeclaration) {
 
   auto [result, output] = AsasFixture::runSourceWithError(source);
 
-  EXPECT_EQ(result, INTERPRET_RUNTIME_ERROR);
   EXPECT_EQ(output, "Undefined variable 'x'.\n[line 1] in script\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }
 
 TEST(VariableTest, ReassignUndefinedVariable) {
@@ -130,7 +114,5 @@ TEST(VariableTest, ReassignUndefinedVariable) {
 
   auto [result, output] = AsasFixture::runSourceWithError(source);
 
-  EXPECT_EQ(result, INTERPRET_RUNTIME_ERROR);
   EXPECT_EQ(output, "Undefined variable 'y'.\n[line 1] in script\n");
-  EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 }

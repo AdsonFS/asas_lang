@@ -17,6 +17,9 @@ InterpretResult VM::run() {
   auto readConstant = [this, &readByte]() {
     return chunk_.getConstantAt(readByte());
   };
+  auto readShort = [this, &readByte]() {
+    return (uint16_t)((readByte() << 8) | readByte());
+  };
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -75,13 +78,29 @@ InterpretResult VM::run() {
     case OP_NOT: opNot(); break;
     case OP_NEGATE: opNegate(); break;
     case OP_PRINT: printValue("-> ", pop(), "\n"); break;
+    case OP_JUMP: {
+      uint16_t offset = readShort();
+      ip_ += offset;
+      break;
+    }
+    case OP_JUMP_IF_FALSE: {
+      uint16_t offset = readShort();
+      if (!ValueHelper::convertToBool(peek()))
+        ip_ += offset;
+      break;
+    }
+    case OP_LOOP: {
+      uint16_t offset = readShort();
+      ip_ -= offset;
+      break;
+    }
     case OP_RETURN: return INTERPRET_OK;
     }
   }
 }
 
 void VM::debugVM() {
-  printf("\033[1;32m");
+  printf("\n\033[1;32m");
   printf("          STACK:");
   for (const Value &value : stack_)
     printValue(" [ ", value, " ]");

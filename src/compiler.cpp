@@ -35,6 +35,41 @@ void Compiler::varDeclaration() {
   defineVariable(global);
 }
 
+void Compiler::ifStatement() {
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+  int thenJump = emitJump(OP_JUMP_IF_FALSE);
+  emitByte(OP_POP);
+  statement();
+
+  int elseJump = emitJump(OP_JUMP);
+
+  patchJump(thenJump);
+  emitByte(OP_POP);
+
+  if (match(TOKEN_ELSE)) statement();
+  patchJump(elseJump);
+}
+
+int Compiler::emitJump(uint8_t instruction) {
+  emitByte(instruction);
+  emitByte(0xff);
+  emitByte(0xff);
+  return currentChunk().getCode().size() - 2;
+}
+
+void Compiler::patchJump(int offset) {
+  // -2 to adjust for the bytecode for the jump offset itself.
+  int jump = currentChunk().getCode().size() - offset - 2;
+
+  if (jump > 0xffff) error("Too much code to jump over.");
+
+  currentChunk().setAt(offset, (jump >> 8) & 0xff);
+  currentChunk().setAt(offset + 1, jump & 0xff);
+}
+
 uint8_t Compiler::parseVariable(const char *errorMessage) {
   consume(TOKEN_IDENTIFIER, errorMessage);
 
@@ -75,12 +110,80 @@ void Compiler::defineVariable(uint8_t global) {
 
 void Compiler::statement() {
   if (match(TOKEN_PRINT)) printStatement();
+  else if (match(TOKEN_IF)) ifStatement();
+  else if (match(TOKEN_WHILE)) whileStatement();
+  else if (match(TOKEN_FOR)) forStatement();
   else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();
     endScope();
   }
   else expressionStatement();
+}
+
+void Compiler::forStatement() {
+  beginScope();
+  // Initializer clause.
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+  if (match(TOKEN_VAR)) varDeclaration();
+  else if (!match(TOKEN_SEMICOLON)) expressionStatement();
+
+  // Condition clause.
+  int loopStart = currentChunk().getCode().size();
+  int exitJump = -1;
+  if (!match(TOKEN_SEMICOLON)) {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+    exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+  }
+
+  // Increment clause.
+  if (!match(TOKEN_RIGHT_PAREN)) {
+    int bodyJump = emitJump(OP_JUMP);
+    int incrementStart = currentChunk().getCode().size();
+    expression();
+    emitByte(OP_POP);
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    emitLoop(loopStart);
+    loopStart = incrementStart;
+    patchJump(bodyJump);
+  } 
+
+  statement();
+  emitLoop(loopStart);
+  if (exitJump != -1) {
+    patchJump(exitJump);
+    emitByte(OP_POP);
+  }
+  endScope();
+}
+
+void Compiler::whileStatement() {
+  int loopStart = currentChunk().getCode().size();
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect '(' after 'while'.");
+
+  int exitJump = emitJump(OP_JUMP_IF_FALSE);
+  emitByte(OP_POP);
+  statement();
+  emitLoop(loopStart);
+
+  patchJump(exitJump);
+  emitByte(OP_POP);
+}
+
+void Compiler::emitLoop(int loopStart) {
+  emitByte(OP_LOOP);
+
+  int offset = currentChunk().getCode().size() - loopStart + 2;
+  if (offset > 0xffff) error("Loop body too large.");
+
+  emitByte((offset >> 8) & 0xff);
+  emitByte(offset & 0xff);
 }
 
 void Compiler::block() {
@@ -192,6 +295,26 @@ uint8_t Compiler::makeConstant(Value value) {
 void Compiler::grouping(bool) {
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+}
+
+void Compiler::andOperator(bool) {
+  int endJump = emitJump(OP_JUMP_IF_FALSE);
+
+  emitByte(OP_POP);
+  parsePrecedence(PREC_AND);
+
+  patchJump(endJump);
+}
+
+void Compiler::orOperator(bool) {
+  int elseJump = emitJump(OP_JUMP_IF_FALSE);
+  int endJump = emitJump(OP_JUMP);
+
+  patchJump(elseJump);
+  emitByte(OP_POP);
+
+  parsePrecedence(PREC_OR);
+  patchJump(endJump);
 }
 
 void Compiler::unary(bool) {

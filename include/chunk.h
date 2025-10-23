@@ -24,6 +24,9 @@ enum OpCode : uint8_t {
   OP_NOT,
   OP_NEGATE,
   OP_PRINT,
+  OP_JUMP,
+  OP_JUMP_IF_FALSE,
+  OP_LOOP,
   OP_RETURN,
 };
 
@@ -41,6 +44,7 @@ public:
   const uint8_t &getChunkAt(size_t index) const { return code_[index]; }
   const int &getLineAt(size_t index) const { return lines_[index]; }
   const std::vector<uint8_t> &getCode() const { return code_; }
+  void setAt(size_t index, uint8_t byte) { code_[index] = byte; }
 
 private:
   std::vector<uint8_t> code_;

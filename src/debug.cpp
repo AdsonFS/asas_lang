@@ -46,6 +46,9 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   case OP_NOT: return DebugChunk::simpleInstruction("OP_NOT", offset);
   case OP_NEGATE: return DebugChunk::simpleInstruction("OP_NEGATE", offset);
   case OP_PRINT: return DebugChunk::simpleInstruction("OP_PRINT", offset);
+  case OP_JUMP: return DebugChunk::jumpInstruction("OP_JUMP", 1, chunk, offset);
+  case OP_JUMP_IF_FALSE: return DebugChunk::jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
+  case OP_LOOP: return DebugChunk::jumpInstruction("OP_LOOP", -1, chunk, offset);
   case OP_RETURN: return DebugChunk::simpleInstruction("OP_RETURN", offset);
   default:
     printf("Unknown opcode %d\n", instruction);
@@ -71,4 +74,12 @@ int DebugChunk::byteInstruction(const char *name, const Chunk &chunk, int offset
   uint8_t slot = chunk.getChunkAt(offset + 1);
   printf("%-16s %4d\n", name, slot);
   return offset + 2;
+}
+
+int DebugChunk::jumpInstruction(const char *name, int sign, const Chunk &chunk, int offset) {
+  uint16_t jump = (uint16_t)(chunk.getChunkAt(offset + 1) << 8);
+  jump |= chunk.getChunkAt(offset + 2);
+  printf("%-16s %4d -> %d\n", name, offset,
+         offset + 3 + sign * jump);
+  return offset + 3;
 }

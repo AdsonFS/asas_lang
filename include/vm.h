@@ -16,6 +16,7 @@ public:
   VM() : ip_(nullptr) {}
   VM(Chunk chunk) : chunk_(chunk), ip_(chunk_.getCode().data()) {}
   InterpretResult interpret(const char *source);
+  int stackSize() const { return stack_.size(); }
 
   ~VM() {
     for (AsasObject* obj : allocatedObjects_)
@@ -29,7 +30,6 @@ private:
   InterpretResult run();
 
   void push(const Value &value) { stack_.push_back(value); }
-  uint8_t readByte() { return *ip_++; }
   Value pop() {
     Value value = stack_.back();
     stack_.pop_back();

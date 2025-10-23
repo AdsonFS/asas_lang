@@ -7,12 +7,16 @@
 
 class AsasFixture {
 public:
-  static std::pair<InterpretResult, std::string> runSource(const char *source) {
+  static std::pair<InterpretResult, std::string> runSourceWithSuccess(const char *source) {
     VM* vm = new VM();
     testing::internal::CaptureStdout();
     InterpretResult result = vm->interpret(source);
     std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(vm->stackSize(), 0);
     delete vm;
+
+    EXPECT_EQ(result, INTERPRET_OK);
+    EXPECT_EQ(AsasString::getRefCountObjects(), 0);
 
     return {result, output};
   }
@@ -24,6 +28,8 @@ public:
     std::string output = testing::internal::GetCapturedStderr();
     delete vm;
 
+    EXPECT_EQ(result, INTERPRET_RUNTIME_ERROR);
+    EXPECT_EQ(AsasString::getRefCountObjects(), 0);
     return {result, output};
   }
 };

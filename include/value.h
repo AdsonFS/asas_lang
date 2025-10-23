@@ -16,8 +16,16 @@ public:
     if (auto objPtr = std::get_if<AsasObject*>(&value)) {
       return dynamic_cast<AsasString*>(*objPtr);
     }
-    std::runtime_error("Value is not an AsasObject*");
+    throw std::runtime_error("Value is not an AsasObject*");
     return nullptr;
+  }
+
+  static bool convertToBool(const Value &value) {
+    if (auto boolPtr = std::get_if<bool>(&value)) {
+      return *boolPtr;
+    }
+    throw std::runtime_error("Value is not a bool");
+    return false;
   }
 
 
