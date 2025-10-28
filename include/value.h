@@ -40,20 +40,20 @@ inline void printValue(const Value &value) {
   std::visit([](auto &&v) {
     using V = std::decay_t<decltype(v)>;
     if constexpr (std::is_same_v<V, std::monostate>)
-      printf("nil");
-    else if constexpr (std::is_same_v<V, bool>)
-      printf("%s", v ? "true" : "false");
-    else if constexpr (std::is_same_v<V, double>)
-      printf("%.2f", v);
-    // print asasString
-    else if constexpr (std::is_same_v<V, AsasObject*>) {
-      AsasString* strObj = dynamic_cast<AsasString*>(v);
-      if (strObj != nullptr)
-        printf("%s", strObj->getData());
+      return void (printf("nil"));
+    if constexpr (std::is_same_v<V, bool>)
+      return void (printf("%s", v ? "true" : "false"));
+    if constexpr (std::is_same_v<V, double>)
+      return void (printf("%.2f", v));
+    if constexpr (std::is_same_v<V, AsasObject*>) {
+      if (dynamic_cast<AsasString*>(v) != nullptr)
+        return void (printf("%s", dynamic_cast<AsasString*>(v)->getData()));
+      if (dynamic_cast<AsasFunction*>(v) != nullptr)
+        return void (printf("<fn %s>", dynamic_cast<AsasFunction*>(v)->getName().c_str()));
       else
-        printf("Object");
+        return void (printf("Object"));
     }
-    else printf("%g", v);
+    throw std::runtime_error("Unknown type in Value variant");
   }, value);
 }
 

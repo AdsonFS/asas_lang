@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include "../asas_fixture.h"
-#include "vm.h"
 
 TEST(VariableTest, SimpleGlobalVariableDeclaration) {
   const char *source =
@@ -36,6 +35,16 @@ TEST(VariableTest, ConcatenationWithVariables) {
   auto [result, output] = AsasFixture::runSourceWithSuccess(source);
 
   EXPECT_EQ(output, "-> Hello, World!\n");
+}
+
+TEST(VariableTest, VariableWithoutInitialization) {
+  const char *source =
+      "var x;\n"
+      "print x;\n";
+
+  auto [result, output] = AsasFixture::runSourceWithSuccess(source);
+
+  EXPECT_EQ(output, "-> nil\n");
 }
 
 TEST(VariableTest, VariableReassignment) {

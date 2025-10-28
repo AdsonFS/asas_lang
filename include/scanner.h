@@ -71,6 +71,8 @@ public:
   Scanner(const char *source) : start_(source), current_(source), line_(1) {}
   Token scanToken();
 
+  const char* getRemainingSource() const { return current_; }
+
 private:
   const char *start_;
   const char *current_;

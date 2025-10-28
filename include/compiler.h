@@ -2,6 +2,8 @@
 #define asas_compiler_h
 
 #include "chunk.h"
+#include "debug.h"
+#include "object.h"
 #include "scanner.h"
 
 enum Precedence {
@@ -26,6 +28,11 @@ public:
   int depth;
 };
 
+enum FunctionType {
+  FUNCTION,
+  SCRIPT
+};
+
 class Parser {
 public:
   Parser() : current(), previous(), hadError(false), panicMode(false) {}
@@ -38,9 +45,15 @@ public:
 
 class Compiler {
 public:
-  Compiler(const char *source, Chunk &chunk)
-      : chunk_(chunk), compilingChunk_(chunk), scanner_(source) {}
-  bool compile();
+  Compiler(const char *source, FunctionType type = SCRIPT, std::string functionName = "")
+      : scanner_(source), currentFunction_(new AsasFunction(new Chunk(), functionName)),
+        currentFunctionType_(SCRIPT)
+  {
+    Token token(TOKEN_FUN, "fun_main", 0, 0);
+    locals_.push_back(LocalVariable(token, 0));
+  }
+
+  AsasFunction *compile();
 
   void declaration();
   void varDeclaration();
@@ -53,8 +66,11 @@ public:
   void expressionStatement();
   void block();
   void declareVariable();
+  void functionDeclaration();
   void beginScope();
   void endScope();
+  void markInitialized();
+  void function(FunctionType type);
 
   void expression();
   void grouping(bool canAssign);
@@ -69,16 +85,18 @@ public:
   void orOperator(bool canAssign);
 
 private:
-  Chunk &chunk_;
-  Chunk &compilingChunk_;
+  // Chunk &chunk_;
+  // Chunk &compilingChunk_;
   Scanner scanner_;
   Parser parser_;
+  AsasFunction* currentFunction_;
+  FunctionType currentFunctionType_;
 
   std::vector<LocalVariable> locals_;
   int scopeDepth_ = 0;
 
   void addLocal(const Token &name);
-  Chunk &currentChunk() { return compilingChunk_; }
+  Chunk *currentChunk() { return currentFunction_->getChunk(); }
 
   void emitLoop(int loopStart);
   int emitJump(uint8_t instruction);
@@ -93,13 +111,29 @@ private:
   uint8_t identifierConstant(const Token &name);
   void namedVariable(const Token &name, bool canAssign);
 
-  void endCompiler() { emitReturn(); }
+  AsasFunction *endCompiler() { 
+    emitReturn();
+    AsasFunction* function = currentFunction_;
+
+#ifdef DEBUG_TRACE_EXECUTION
+    // if (!parser_.hadError) {
+    //   const char *functionName = currentFunction_->getName() != nullptr
+    //                                  ? currentFunction_->getName()
+    //                                  : "<script>";
+    //   DebugChunk::disassembleChunk(*currentFunction_->getChunk(), functionName);
+    // }
+#endif
+
+    return function;
+  }
   void emitReturn() { emitByte(OP_RETURN); }
   void emitConstant(Value value) {
     emitBytes(OP_CONSTANT, makeConstant(value));
   }
   uint8_t makeConstant(Value value);
-  void emitByte(uint8_t byte) { chunk_.write(byte, parser_.previous.line); }
+  void emitByte(uint8_t byte) {
+    currentChunk()->write(byte, parser_.previous.line);
+  }
   void emitBytes(uint8_t byte1, uint8_t byte2) {
     emitByte(byte1); emitByte(byte2);
   }

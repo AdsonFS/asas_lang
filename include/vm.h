@@ -2,6 +2,7 @@
 #define asas_vm_h
 
 #include "chunk.h"
+#include "debug.h"
 #include <stack>
 #include <unordered_map>
 
@@ -11,10 +12,37 @@ enum InterpretResult {
   INTERPRET_RUNTIME_ERROR
 };
 
+class CallFrame {
+public:
+  CallFrame(AsasFunction *function, size_t slotStartIndex)
+      : ip_(function->getChunk()->getCode().data()),
+        function_(function), slotStartIndex_(slotStartIndex) {}
+
+  const uint8_t readByte() { return *ip_++; }
+  const uint16_t readShort() { return (uint16_t)((readByte() << 8) | readByte()); }
+  const Value readConstant() { return function_->getChunk()->getConstantAt(readByte()); }
+  const void incrementIP(int offset) { ip_ += offset; }
+  const uint8_t getSlot() { return readByte() - slotStartIndex_ + 1; }
+  const void debugCF() {
+    size_t offset = static_cast<size_t>(ip_ - function_->getChunk()->getCode().data());
+    DebugChunk::disassembleInstruction(*function_->getChunk(), offset);
+  }
+  const int getCurrentLine() {
+    size_t offset = static_cast<size_t>(ip_ - function_->getChunk()->getCode().data()) - 1;
+    return function_->getChunk()->getLineAt(offset);
+  }
+  
+
+private:
+  const uint8_t *ip_;
+  AsasFunction *function_;
+  const int slotStartIndex_;
+};
+
 class VM {
 public:
-  VM() : ip_(nullptr) {}
-  VM(Chunk chunk) : chunk_(chunk), ip_(chunk_.getCode().data()) {}
+  // VM() : ip_(nullptr) {}
+  // VM(Chunk chunk) : chunk_(chunk), ip_(chunk_.getCode().data()) {}
   InterpretResult interpret(const char *source);
   int stackSize() const { return stack_.size(); }
 
@@ -23,10 +51,12 @@ public:
       delete obj;
   }
 private:
-  Chunk chunk_;
+  // Chunk chunk_;
+  // const uint8_t *ip_;
   std::vector<Value> stack_;
+  std::vector<CallFrame> callFrames_;
   std::unordered_map<std::string, Value> globals_;
-  const uint8_t *ip_;
+
   InterpretResult run();
 
   void push(const Value &value) { stack_.push_back(value); }

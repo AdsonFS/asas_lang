@@ -7,22 +7,65 @@
 #include "compiler.h"
 #include "scanner.h"
 #include "object.h"
+#include "common.h"
 
 
-bool Compiler::compile() {
+AsasFunction *Compiler::compile() {
   advance();
   while (!match(TOKEN_EOF)) {
     declaration();
   }
-  endCompiler();
-  return !parser_.hadError;
+  return parser_.hadError ? nullptr : endCompiler();
 }
 
 void Compiler::declaration() {
   if (match(TOKEN_VAR)) varDeclaration();
+  else if (match(TOKEN_FUN)) functionDeclaration();
   else statement();
 
   if (parser_.panicMode) synchronize();
+}
+
+void Compiler::functionDeclaration() {
+  uint8_t global = parseVariable("Expect function name.");
+  markInitialized();
+  function(FunctionType::FUNCTION);
+  defineVariable(global);
+}
+
+void Compiler::function(FunctionType type) {
+  const char* functionName = nullptr;
+  if (type == FUNCTION) {
+    functionName = std::string(parser_.previous.start, parser_.previous.length).c_str();
+    printf("Compiling function: %s\n", functionName);
+  }
+  Compiler functionCompiler(scanner_.getRemainingSource(), type, functionName);
+  functionCompiler.parser_ = parser_;
+  
+  functionCompiler.beginScope();
+  functionCompiler.consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+
+  if (!functionCompiler.check(TOKEN_RIGHT_PAREN)) {
+    do {
+      functionCompiler.currentFunction_->arity++;
+      if (functionCompiler.currentFunction_->arity > 255)
+        functionCompiler.errorAtCurrent("Can't have more than 255 parameters.");
+
+      uint8_t paramConstant = functionCompiler.parseVariable("Expect parameter name.");
+      functionCompiler.defineVariable(paramConstant);
+    } while (functionCompiler.match(TOKEN_COMMA));
+  }
+
+
+  functionCompiler.consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
+  functionCompiler.consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+  functionCompiler.block();
+  
+  AsasFunction* function = functionCompiler.endCompiler();
+  emitBytes(OP_CONSTANT, makeConstant(function));
+
+  parser_ = functionCompiler.parser_;
+  scanner_ = functionCompiler.scanner_;
 }
 
 void Compiler::varDeclaration() {
@@ -57,17 +100,17 @@ int Compiler::emitJump(uint8_t instruction) {
   emitByte(instruction);
   emitByte(0xff);
   emitByte(0xff);
-  return currentChunk().getCode().size() - 2;
+  return currentChunk()->getCode().size() - 2;
 }
 
 void Compiler::patchJump(int offset) {
   // -2 to adjust for the bytecode for the jump offset itself.
-  int jump = currentChunk().getCode().size() - offset - 2;
+  int jump = currentChunk()->getCode().size() - offset - 2;
 
   if (jump > 0xffff) error("Too much code to jump over.");
 
-  currentChunk().setAt(offset, (jump >> 8) & 0xff);
-  currentChunk().setAt(offset + 1, jump & 0xff);
+  currentChunk()->setAt(offset, (jump >> 8) & 0xff);
+  currentChunk()->setAt(offset + 1, jump & 0xff);
 }
 
 uint8_t Compiler::parseVariable(const char *errorMessage) {
@@ -103,8 +146,13 @@ uint8_t Compiler::identifierConstant(const Token &name) {
   return makeConstant(new AsasString(std::string(name.start, name.length).c_str()));
 }
 
+void Compiler::markInitialized() {
+  if (scopeDepth_ == 0) return;
+  locals_.back().depth = scopeDepth_;
+}
+
 void Compiler::defineVariable(uint8_t global) {
-  if (scopeDepth_) return void(locals_.back().depth = scopeDepth_);
+  if (scopeDepth_) return void(markInitialized());
   emitBytes(OP_DEFINE_GLOBAL, global);
 }
 
@@ -129,7 +177,7 @@ void Compiler::forStatement() {
   else if (!match(TOKEN_SEMICOLON)) expressionStatement();
 
   // Condition clause.
-  int loopStart = currentChunk().getCode().size();
+  int loopStart = currentChunk()->getCode().size();
   int exitJump = -1;
   if (!match(TOKEN_SEMICOLON)) {
     expression();
@@ -142,7 +190,7 @@ void Compiler::forStatement() {
   // Increment clause.
   if (!match(TOKEN_RIGHT_PAREN)) {
     int bodyJump = emitJump(OP_JUMP);
-    int incrementStart = currentChunk().getCode().size();
+    int incrementStart = currentChunk()->getCode().size();
     expression();
     emitByte(OP_POP);
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
@@ -162,10 +210,10 @@ void Compiler::forStatement() {
 }
 
 void Compiler::whileStatement() {
-  int loopStart = currentChunk().getCode().size();
+  int loopStart = currentChunk()->getCode().size();
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
   expression();
-  consume(TOKEN_RIGHT_PAREN, "Expect '(' after 'while'.");
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after 'while'.");
 
   int exitJump = emitJump(OP_JUMP_IF_FALSE);
   emitByte(OP_POP);
@@ -179,7 +227,7 @@ void Compiler::whileStatement() {
 void Compiler::emitLoop(int loopStart) {
   emitByte(OP_LOOP);
 
-  int offset = currentChunk().getCode().size() - loopStart + 2;
+  int offset = currentChunk()->getCode().size() - loopStart + 2;
   if (offset > 0xffff) error("Loop body too large.");
 
   emitByte((offset >> 8) & 0xff);
@@ -280,11 +328,11 @@ void Compiler::literal(bool) {
 
 void Compiler::number(bool) {
   double value = strtod(parser_.previous.start, nullptr);
-  emitBytes(OP_CONSTANT, chunk_.addConstant(value));
+  emitBytes(OP_CONSTANT, currentChunk()->addConstant(value));
 }
 
 uint8_t Compiler::makeConstant(Value value) {
-  int constant = currentChunk().addConstant(value);
+  int constant = currentChunk()->addConstant(value);
   if (constant > 255) {
     error("Too many constants in one chunk.");
     return 0;
