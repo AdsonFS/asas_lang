@@ -15,16 +15,14 @@ InterpretResult VM::interpret(const char *source) {
     function,
     stack_.size()
   });
-      
-  // chunk_ = *function->getChunk();
-  // ip_ = chunk_.getCode().data();
+  DebugChunk::disassembleChunk(*function->getChunk(), "code");
   return run();
 }
 
 InterpretResult VM::run() {
-  CallFrame *frame = &callFrames_.back();
 
   for (;;) {
+    CallFrame *frame = &callFrames_.back();
 #ifdef DEBUG_TRACE_EXECUTION
     debugVM();
 #endif
@@ -97,8 +95,47 @@ InterpretResult VM::run() {
       frame->incrementIP(-offset);
       break;
     }
-    case OP_RETURN: return INTERPRET_OK;
+    case OP_CALL: {
+      int argCount = frame->readByte();
+      if (!callValue(peek(argCount), argCount)) {
+        runtimeError("Failed to call function.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
     }
+    case OP_RETURN: 
+      Value result = pop();
+      if (callFrames_.size() == 1) {
+        pop();
+        return INTERPRET_OK;
+      }
+      for (size_t i = frame->getFunction()->arity + 1; i > 0; i--) pop();
+      callFrames_.pop_back();
+      push(result);
+      break;
+    }
+  }
+}
+
+bool VM::callValue(const Value &callee, int argCount) {
+  auto object = std::get_if<AsasObject*>(&callee);
+  if (object == nullptr) {
+    runtimeError("Can only call functions and classes.");
+    return false;
+  }
+
+  auto functionValue = dynamic_cast<AsasFunction*>(*object);
+  if (functionValue != nullptr) {
+    if (argCount != functionValue->arity) {
+      runtimeError("Expected %d arguments but got %d.", functionValue->arity, argCount);
+      return false;
+    }
+    if (callFrames_.size() >= 256) { runtimeError("Stack overflow."); return false; }
+    callFrames_.push_back(CallFrame{
+      functionValue,
+      (stack_.size()) - argCount - 1 // -1 for the function itself
+    });
+    return true;
   }
 }
 
@@ -110,8 +147,6 @@ void VM::debugVM() {
   printf("\n");
 
   callFrames_.back().debugCF();
-  // int offset = static_cast<int>(ip_ - chunk_.getCode().data());
-  // DebugChunk::disassembleInstruction(chunk_, offset);
 }
 
 Value VM::runtimeError(const char *format, ...) {
@@ -121,8 +156,19 @@ Value VM::runtimeError(const char *format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
-  int line = callFrames_.back().getCurrentLine();
-  fprintf(stderr, "[line %d] in script\n", line);
+  // int line = callFrames_.back().getCurrentLine();
+  // fprintf(stderr, "[line %d] in script\n", line);
+  for (int i = static_cast<int>(callFrames_.size()) - 1; i >= 0; i--) {
+    CallFrame &frame = callFrames_[i];
+    AsasFunction *function = frame.getFunction();
+
+    int line = frame.getCurrentLine();
+    fprintf(stderr, "[line %d] in ", line);
+
+    if (function->getName().empty()) fprintf(stderr, "script\n");
+    else fprintf(stderr, "%s()\n", function->getName().c_str());
+  }
+
   stack_ = std::vector<Value>();
   return std::monostate();
 }

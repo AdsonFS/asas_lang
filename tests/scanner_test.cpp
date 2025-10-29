@@ -67,7 +67,7 @@ TEST(ScannerTest, KeywordsTokens) {
   std::vector<std::pair<TokenType, const char*>> expectedTokens = {
       {TOKEN_AND, "and"},       {TOKEN_CLASS, "class"},
       {TOKEN_ELSE, "else"},     {TOKEN_FALSE, "false"},
-      {TOKEN_FOR, "for"},       {TOKEN_FUN, "fun"},
+      {TOKEN_FOR, "for"},       {TOKEN_FUNC, "func"},
       {TOKEN_IF, "if"},         {TOKEN_IDENTIFIER, "notkeyword"},
       {TOKEN_NIL, "nil"},       {TOKEN_OR, "or"},
       {TOKEN_PRINT, "print"},   {TOKEN_RETURN, "return"},

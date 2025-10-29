@@ -2,7 +2,7 @@
 #include "compiler.h"
 
 ParseRule ParseRule::rules[] = {
-  [TOKEN_LEFT_PAREN]    = {&Compiler::grouping, NULL,   PREC_NONE},
+  [TOKEN_LEFT_PAREN]    = {&Compiler::grouping, &Compiler::call,   PREC_CALL},
   [TOKEN_RIGHT_PAREN]   = {NULL,     NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE}, 
   [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
@@ -29,7 +29,7 @@ ParseRule ParseRule::rules[] = {
   [TOKEN_ELSE]          = {NULL,     NULL,   PREC_NONE},
   [TOKEN_FALSE]         = {&Compiler::literal,     NULL,   PREC_NONE},
   [TOKEN_FOR]           = {NULL,     &Compiler::orOperator,   PREC_OR},
-  [TOKEN_FUN]           = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_FUNC]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_IF]            = {NULL,     NULL,   PREC_NONE},
   [TOKEN_NIL]           = {&Compiler::literal,     NULL,   PREC_NONE},
   [TOKEN_OR]            = {NULL,     NULL,   PREC_NONE},

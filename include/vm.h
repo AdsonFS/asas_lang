@@ -31,7 +31,7 @@ public:
     size_t offset = static_cast<size_t>(ip_ - function_->getChunk()->getCode().data()) - 1;
     return function_->getChunk()->getLineAt(offset);
   }
-  
+  AsasFunction* getFunction() { return function_; }
 
 private:
   const uint8_t *ip_;
@@ -65,7 +65,10 @@ private:
     stack_.pop_back();
     return value;
   }
-  Value peek() { return stack_.back(); }
+  Value peek(int distance = 0) {
+    return stack_[stack_.size() - 1 - distance];
+  }
+  bool callValue(const Value &callee, int argCount);
 
   Value runtimeError(const char *format, ...);
   void opEqual();

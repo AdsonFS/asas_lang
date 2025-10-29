@@ -47,9 +47,9 @@ class Compiler {
 public:
   Compiler(const char *source, FunctionType type = SCRIPT, std::string functionName = "")
       : scanner_(source), currentFunction_(new AsasFunction(new Chunk(), functionName)),
-        currentFunctionType_(SCRIPT)
+        currentFunctionType_(type)
   {
-    Token token(TOKEN_FUN, "fun_main", 0, 0);
+    Token token(TOKEN_FUNC, "func_main", 0, 0);
     locals_.push_back(LocalVariable(token, 0));
   }
 
@@ -64,6 +64,7 @@ public:
   void whileStatement();
   void forStatement();
   void expressionStatement();
+  void returnStatement();
   void block();
   void declareVariable();
   void functionDeclaration();
@@ -71,8 +72,10 @@ public:
   void endScope();
   void markInitialized();
   void function(FunctionType type);
+  uint8_t argumentsList();
 
   void expression();
+  void call(bool canAssign);
   void grouping(bool canAssign);
   void variable(bool canAssign);
   void string(bool canAssign);
@@ -116,17 +119,17 @@ private:
     AsasFunction* function = currentFunction_;
 
 #ifdef DEBUG_TRACE_EXECUTION
-    // if (!parser_.hadError) {
-    //   const char *functionName = currentFunction_->getName() != nullptr
-    //                                  ? currentFunction_->getName()
-    //                                  : "<script>";
-    //   DebugChunk::disassembleChunk(*currentFunction_->getChunk(), functionName);
-    // }
+    if (!parser_.hadError) {
+      // std::string functionName = currentFunction_->getName().empty()
+                                     // ? currentFunction_->getName()
+                                     // : "<script>";
+      // DebugChunk::disassembleChunk(*currentFunction_->getChunk(), functionName.c_str());
+    }
 #endif
 
     return function;
   }
-  void emitReturn() { emitByte(OP_RETURN); }
+  void emitReturn() { emitByte(OP_NIL); emitByte(OP_RETURN); }
   void emitConstant(Value value) {
     emitBytes(OP_CONSTANT, makeConstant(value));
   }

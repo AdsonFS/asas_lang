@@ -12,12 +12,12 @@ public:
     testing::internal::CaptureStdout();
     InterpretResult result = vm->interpret(source);
     std::string output = testing::internal::GetCapturedStdout();
-    // EXPECT_EQ(vm->stackSize(), 0);
+
+    EXPECT_EQ(vm->stackSize(), 0);
     delete vm;
 
     EXPECT_EQ(result, INTERPRET_OK);
-    // EXPECT_EQ(vm->stackSize(), 0);
-    // EXPECT_EQ(AsasString::getRefCountObjects(), 0);
+    EXPECT_EQ(AsasString::getRefCountObjects(), 0);
     // EXPECT_EQ(AsasFunction::getRefCountObjects(), 0);
 
     return {result, output};
@@ -28,11 +28,12 @@ public:
     testing::internal::CaptureStderr();
     InterpretResult result = vm->interpret(source);
     std::string output = testing::internal::GetCapturedStderr();
+
+    EXPECT_EQ(vm->stackSize(), 0);
     delete vm;
 
     EXPECT_EQ(result, INTERPRET_RUNTIME_ERROR);
-    // EXPECT_EQ(vm->stackSize(), 0);
-    // EXPECT_EQ(AsasString::getRefCountObjects(), 0);
+    EXPECT_EQ(AsasString::getRefCountObjects(), 0);
     // EXPECT_EQ(AsasFunction::getRefCountObjects(), 0);
 
     return {result, output};

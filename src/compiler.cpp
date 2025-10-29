@@ -20,7 +20,7 @@ AsasFunction *Compiler::compile() {
 
 void Compiler::declaration() {
   if (match(TOKEN_VAR)) varDeclaration();
-  else if (match(TOKEN_FUN)) functionDeclaration();
+  else if (match(TOKEN_FUNC)) functionDeclaration();
   else statement();
 
   if (parser_.panicMode) synchronize();
@@ -34,11 +34,7 @@ void Compiler::functionDeclaration() {
 }
 
 void Compiler::function(FunctionType type) {
-  const char* functionName = nullptr;
-  if (type == FUNCTION) {
-    functionName = std::string(parser_.previous.start, parser_.previous.length).c_str();
-    printf("Compiling function: %s\n", functionName);
-  }
+  std::string functionName(parser_.previous.start, parser_.previous.length);
   Compiler functionCompiler(scanner_.getRemainingSource(), type, functionName);
   functionCompiler.parser_ = parser_;
   
@@ -161,12 +157,27 @@ void Compiler::statement() {
   else if (match(TOKEN_IF)) ifStatement();
   else if (match(TOKEN_WHILE)) whileStatement();
   else if (match(TOKEN_FOR)) forStatement();
+  else if (match(TOKEN_RETURN)) returnStatement();
   else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();
     endScope();
   }
   else expressionStatement();
+}
+
+void Compiler::returnStatement() {
+  if (currentFunctionType_ == FunctionType::SCRIPT)
+    error("Can't return from top-level code.");
+
+  if (match(TOKEN_SEMICOLON)) {
+    emitByte(OP_NIL);
+    emitByte(OP_RETURN);
+  } else {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+    emitByte(OP_RETURN);
+  }
 }
 
 void Compiler::forStatement() {
@@ -274,6 +285,24 @@ void Compiler::parsePrecedence(Precedence precedence) {
     ParseFn infixRule = ParseRule::getRule(parser_.previous.type)->infix;
     (this->*infixRule)(canAssign);
   }
+}
+
+void Compiler::call(bool) {
+  uint8_t argCount = argumentsList();
+  emitBytes(OP_CALL, argCount);
+}
+
+uint8_t Compiler::argumentsList() {
+  uint8_t argCount = 0;
+  if (!check(TOKEN_RIGHT_PAREN)) {
+    do {
+      expression();
+      if (argCount == 255) error("Can't have more than 255 arguments.");
+      argCount++;
+    } while (match(TOKEN_COMMA));
+  }
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+  return argCount;
 }
 
 void Compiler::variable(bool canAssign) {
@@ -446,7 +475,7 @@ void Compiler::synchronize() {
 
     switch (parser_.current.type) {
     case TOKEN_CLASS:
-    case TOKEN_FUN:
+    case TOKEN_FUNC:
     case TOKEN_VAR:
     case TOKEN_FOR:
     case TOKEN_IF:

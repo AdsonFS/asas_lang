@@ -16,6 +16,4 @@ public:
 private:
 };
 
-// ParseRule *getRule(TokenType type);
-
 #endif // asas_parse_rule_h

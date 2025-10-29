@@ -49,6 +49,7 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   case OP_JUMP: return DebugChunk::jumpInstruction("OP_JUMP", 1, chunk, offset);
   case OP_JUMP_IF_FALSE: return DebugChunk::jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
   case OP_LOOP: return DebugChunk::jumpInstruction("OP_LOOP", -1, chunk, offset);
+  case OP_CALL: return DebugChunk::byteInstruction("OP_CALL", chunk, offset);
   case OP_RETURN: return DebugChunk::simpleInstruction("OP_RETURN", offset);
   default:
     printf("Unknown opcode %d\n", instruction);
