@@ -47,6 +47,11 @@ public:
   const std::vector<uint8_t> &getCode() const { return code_; }
   void setAt(size_t index, uint8_t byte) { code_[index] = byte; }
 
+  // ~Chunk() = default;
+  ~Chunk() {
+    printf("Destroying Chunk with %zu constants.\n", constants_.size());
+  }
+
 private:
   std::vector<uint8_t> code_;
   std::vector<int> lines_;

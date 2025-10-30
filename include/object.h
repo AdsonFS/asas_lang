@@ -3,8 +3,7 @@
 
 #include <cstring>
 #include <string>
-
-class Chunk;
+#include "chunk.h"
 
 class AsasObject {
 public:
@@ -45,6 +44,13 @@ public:
 
   std::string getName() const { return name_; }
   Chunk *getChunk() const { return chunk_; }
+  
+  // Now you can use Chunk methods directly if needed
+  void addInstruction(uint8_t instruction, int line) {
+    if (chunk_) {
+      chunk_->write(instruction, line);
+    }
+  }
 
   int arity;
 private:

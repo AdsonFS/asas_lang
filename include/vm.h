@@ -3,6 +3,7 @@
 
 #include "chunk.h"
 #include "debug.h"
+#include "object.h"
 #include <stack>
 #include <unordered_map>
 
@@ -16,13 +17,13 @@ class CallFrame {
 public:
   CallFrame(AsasFunction *function, size_t slotStartIndex)
       : ip_(function->getChunk()->getCode().data()),
-        function_(function), slotStartIndex_(slotStartIndex) {}
+        function_(function), slotStartIndex_(slotStartIndex) { }
 
   const uint8_t readByte() { return *ip_++; }
   const uint16_t readShort() { return (uint16_t)((readByte() << 8) | readByte()); }
   const Value readConstant() { return function_->getChunk()->getConstantAt(readByte()); }
   const void incrementIP(int offset) { ip_ += offset; }
-  const uint8_t getSlot() { return readByte() - slotStartIndex_ + 1; }
+  const uint8_t getSlot() { return readByte() + slotStartIndex_ + 0; }
   const void debugCF() {
     size_t offset = static_cast<size_t>(ip_ - function_->getChunk()->getCode().data());
     DebugChunk::disassembleInstruction(*function_->getChunk(), offset);
