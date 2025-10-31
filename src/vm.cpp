@@ -11,11 +11,10 @@ InterpretResult VM::interpret(const char *source) {
     return INTERPRET_COMPILE_ERROR;
 
   push(function);
-  callFrames_.push_back(CallFrame{
-    function,
-    stack_.size()
-  });
-  DebugChunk::disassembleChunk(*function->getChunk(), "code");
+  callFrames_.push_back(CallFrame{function, 0});
+  // DebugChunk::disassembleChunk(*function->getChunk(), "code");
+
+  defineNativeFunctions();
   return run();
 }
 
@@ -137,6 +136,19 @@ bool VM::callValue(const Value &callee, int argCount) {
     });
     return true;
   }
+
+  auto nativeFunctionValue = dynamic_cast<AsasNativeFunction*>(*object);
+  if (nativeFunctionValue == nullptr) {
+    runtimeError("Can only call functions and classes.");
+    return false;
+  }
+  std::vector<Value> args;
+  for (int i = 0; i < argCount; i++) {
+    args.push_back(peek(argCount - 1 - i));
+  }
+  pop();
+  push(nativeFunctionValue->call(args));
+  return true;
 }
 
 void VM::debugVM() {
@@ -156,11 +168,13 @@ Value VM::runtimeError(const char *format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
-  // int line = callFrames_.back().getCurrentLine();
-  // fprintf(stderr, "[line %d] in script\n", line);
+  AsasFunction *upFunction = nullptr;
   for (int i = static_cast<int>(callFrames_.size()) - 1; i >= 0; i--) {
     CallFrame &frame = callFrames_[i];
     AsasFunction *function = frame.getFunction();
+
+    if (upFunction == function) continue;
+    upFunction = function;
 
     int line = frame.getCurrentLine();
     fprintf(stderr, "[line %d] in ", line);
@@ -171,4 +185,28 @@ Value VM::runtimeError(const char *format, ...) {
 
   stack_ = std::vector<Value>();
   return std::monostate();
+}
+
+void VM::defineNativeFunctions() {
+  globals_["clock"] = new AsasNativeFunction(
+    [](const std::vector<Value>& args) -> Value {
+      return static_cast<double>(clock()) / CLOCKS_PER_SEC;
+    },
+    "clock"
+  );
+
+  globals_["delay"] = new AsasNativeFunction(
+    [](const std::vector<Value>& args) -> Value {
+      if (args.size() != 1 || !std::holds_alternative<double>(args[0])) {
+        return std::monostate{};
+      }
+      double seconds = std::get<double>(args[0]);
+      clock_t start_time = clock();
+      while (static_cast<double>(clock() - start_time) / CLOCKS_PER_SEC < seconds) {
+        // Busy-wait loop
+      }
+      return std::monostate{};
+    },
+    "delay"
+  );
 }

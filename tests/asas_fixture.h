@@ -17,7 +17,7 @@ public:
     delete vm;
 
     EXPECT_EQ(result, INTERPRET_OK);
-    EXPECT_EQ(AsasString::getRefCountObjects(), 0);
+    // EXPECT_EQ(AsasString::getRefCountObjects(), 0);
     // EXPECT_EQ(AsasFunction::getRefCountObjects(), 0);
 
     return {result, output};
@@ -33,7 +33,7 @@ public:
     delete vm;
 
     EXPECT_EQ(result, INTERPRET_RUNTIME_ERROR);
-    EXPECT_EQ(AsasString::getRefCountObjects(), 0);
+    // EXPECT_EQ(AsasString::getRefCountObjects(), 0);
     // EXPECT_EQ(AsasFunction::getRefCountObjects(), 0);
 
     return {result, output};

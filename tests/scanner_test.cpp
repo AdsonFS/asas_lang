@@ -62,7 +62,7 @@ TEST(ScannerTest, OperatorsTokensWithoutSpaces) {
 
 TEST(ScannerTest, KeywordsTokens) {
   const char *source =
-      "and class else false for fun if notkeyword nil or print return super this true var while";
+      "and class else false for func if notkeyword nil or print return super this true var while";
   Scanner scanner(source);
   std::vector<std::pair<TokenType, const char*>> expectedTokens = {
       {TOKEN_AND, "and"},       {TOKEN_CLASS, "class"},

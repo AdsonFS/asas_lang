@@ -3,6 +3,8 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
+#include <functional>
 #include "chunk.h"
 
 class AsasObject {
@@ -45,7 +47,6 @@ public:
   std::string getName() const { return name_; }
   Chunk *getChunk() const { return chunk_; }
   
-  // Now you can use Chunk methods directly if needed
   void addInstruction(uint8_t instruction, int line) {
     if (chunk_) {
       chunk_->write(instruction, line);
@@ -54,9 +55,30 @@ public:
 
   int arity;
 private:
-  // const char *name_;
   std::string name_;
   Chunk *chunk_;
+
+  inline static int refCountObjects_ = 0;
+};
+
+class AsasNativeFunction : public AsasObject {
+public:
+  using NativeFn = std::function<Value(const std::vector<Value>&)>;
+  AsasNativeFunction(NativeFn fn, std::string name = "")
+      : function_(std::move(fn)), name_(std::move(name))
+  {
+    refCountObjects_++;
+  }
+  ~AsasNativeFunction() override { refCountObjects_--; }
+  static int getRefCountObjects()  { return refCountObjects_; }
+  std::string getName() const { return name_; }
+  Value call(const std::vector<Value> &args) const {
+    return function_(args);
+  }
+
+private:
+  NativeFn function_;
+  std::string name_;
 
   inline static int refCountObjects_ = 0;
 };

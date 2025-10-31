@@ -60,6 +60,7 @@ private:
 
   InterpretResult run();
 
+  void defineNativeFunctions();
   void push(const Value &value) { stack_.push_back(value); }
   Value pop() {
     Value value = stack_.back();
