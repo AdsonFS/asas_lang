@@ -83,4 +83,21 @@ private:
   inline static int refCountObjects_ = 0;
 };
 
+class AsasClosure : public AsasObject {
+public:
+  explicit AsasClosure(AsasFunction *function)
+      : function_(function)
+  {
+    refCountObjects_++;
+  }
+  ~AsasClosure() override { refCountObjects_--; }
+  static int getRefCountObjects()  { return refCountObjects_; }
+
+  AsasFunction* getFunction() const { return function_; }
+
+private:
+  AsasFunction *function_;
+  inline static int refCountObjects_ = 0;
+};
+
 #endif // asas_object_h

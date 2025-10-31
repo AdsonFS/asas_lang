@@ -10,8 +10,13 @@ InterpretResult VM::interpret(const char *source) {
   if (function == nullptr)
     return INTERPRET_COMPILE_ERROR;
 
-  push(function);
-  callFrames_.push_back(CallFrame{function, 0});
+  AsasClosure* closure = new AsasClosure(function);
+  // push(function);
+  // callFrames_.push_back(CallFrame{function, 0});
+
+  // TODO -> push and pop function
+  push(closure);
+  callFrames_.push_back(CallFrame{closure, 0});
   // DebugChunk::disassembleChunk(*function->getChunk(), "code");
 
   defineNativeFunctions();
@@ -23,7 +28,7 @@ InterpretResult VM::run() {
   for (;;) {
     CallFrame *frame = &callFrames_.back();
 #ifdef DEBUG_TRACE_EXECUTION
-    debugVM();
+    // debugVM();
 #endif
     uint8_t instruction;
     switch (instruction = frame->readByte()) {
@@ -102,6 +107,13 @@ InterpretResult VM::run() {
       }
       break;
     }
+    case OP_CLOSURE: {
+      const Value& constant = frame->readConstant();
+      AsasFunction* fn = ValueHelper::toFunctionObj(constant);
+      AsasClosure* closure = new AsasClosure(fn);
+      push(closure);
+      break;
+    }
     case OP_RETURN: 
       Value result = pop();
       if (callFrames_.size() == 1) {
@@ -123,31 +135,44 @@ bool VM::callValue(const Value &callee, int argCount) {
     return false;
   }
 
-  auto functionValue = dynamic_cast<AsasFunction*>(*object);
-  if (functionValue != nullptr) {
-    if (argCount != functionValue->arity) {
-      runtimeError("Expected %d arguments but got %d.", functionValue->arity, argCount);
-      return false;
-    }
-    if (callFrames_.size() >= 256) { runtimeError("Stack overflow."); return false; }
-    callFrames_.push_back(CallFrame{
-      functionValue,
-      (stack_.size()) - argCount - 1 // -1 for the function itself
-    });
-    return true;
-  }
+  auto closureValue = dynamic_cast<AsasClosure*>(*object);
+  if (closureValue != nullptr) return handleClosureCall(closureValue, argCount);
 
   auto nativeFunctionValue = dynamic_cast<AsasNativeFunction*>(*object);
-  if (nativeFunctionValue == nullptr) {
+  if (nativeFunctionValue != nullptr) return handleNativeFunctionCall(nativeFunctionValue, argCount);
+
+  runtimeError("Can only call functions and classes.");
+  return false;
+}
+
+bool VM::handleClosureCall(AsasClosure* closure, int argCount) {
+  AsasFunction* functionValue = closure->getFunction();
+  if (functionValue == nullptr) {
     runtimeError("Can only call functions and classes.");
     return false;
   }
+
+  if (argCount != functionValue->arity) {
+    runtimeError("Expected %d arguments but got %d.", functionValue->arity, argCount);
+    return false;
+  }
+
+  if (callFrames_.size() >= 256) { runtimeError("Stack overflow."); return false; }
+  callFrames_.push_back(CallFrame{
+    // functionValue,
+    closure,
+    (stack_.size()) - argCount - 1 // -1 for the function itself
+  });
+  return true;
+}
+
+bool VM::handleNativeFunctionCall(AsasNativeFunction* nativeFn, int argCount) {
   std::vector<Value> args;
   for (int i = 0; i < argCount; i++) {
     args.push_back(peek(argCount - 1 - i));
   }
   pop();
-  push(nativeFunctionValue->call(args));
+  push(nativeFn->call(args));
   return true;
 }
 

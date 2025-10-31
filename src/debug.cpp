@@ -50,6 +50,13 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   case OP_JUMP_IF_FALSE: return DebugChunk::jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
   case OP_LOOP: return DebugChunk::jumpInstruction("OP_LOOP", -1, chunk, offset);
   case OP_CALL: return DebugChunk::byteInstruction("OP_CALL", chunk, offset);
+  case OP_CLOSURE: {
+    uint8_t constant = chunk.getChunkAt(offset + 1);
+    printf("%-16s %4d '", "OP_CLOSURE", constant);
+    printValue(chunk.getConstantAt(constant));
+    printf("'\n");
+    return offset + 2;
+  }
   case OP_RETURN: return DebugChunk::simpleInstruction("OP_RETURN", offset);
   default:
     printf("Unknown opcode %d\n", instruction);

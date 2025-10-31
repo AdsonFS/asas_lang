@@ -9,6 +9,16 @@ AsasString* ValueHelper::toStringObj(const Value &value) {
   return nullptr;
 }
 
+AsasFunction* ValueHelper::toFunctionObj(const Value &value) {
+  auto objPtr = std::get_if<AsasObject*>(&value);
+  if (objPtr == nullptr)
+    throw std::runtime_error("Value is not an AsasFunction*");
+  auto funcPtr = dynamic_cast<AsasFunction*>(*objPtr);
+  if (funcPtr == nullptr)
+    throw std::runtime_error("Value is not an AsasFunction*");
+  return funcPtr;
+}
+
 bool ValueHelper::toBool(const Value &value) {
   if (auto boolPtr = std::get_if<bool>(&value)) {
     return *boolPtr;
@@ -37,8 +47,10 @@ void printValue(const Value &value) {
         return void (printf("%s", dynamic_cast<AsasString*>(v)->getData()));
       if (dynamic_cast<AsasFunction*>(v) != nullptr)
         return void (printf("<fn %s>", dynamic_cast<AsasFunction*>(v)->getName().c_str()));
-      else
-        return void (printf("Object"));
+      if (dynamic_cast<AsasNativeFunction*>(v) != nullptr)
+        return void (printf("<native fn %s>", dynamic_cast<AsasNativeFunction*>(v)->getName().c_str()));
+      if (dynamic_cast<AsasClosure*>(v) != nullptr)
+        return void (printf("<closure %s>", dynamic_cast<AsasClosure*>(v)->getFunction()->getName().c_str()));
     }
     throw std::runtime_error("Unknown type in Value variant");
   }, value);

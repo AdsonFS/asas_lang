@@ -14,8 +14,10 @@ using Value = std::variant<std::monostate, bool, double, AsasObject*>;
 class ValueHelper {
 public:
   static AsasString* toStringObj(const Value &value);
-  static bool toBool(const Value &value);
+  static AsasFunction* toFunctionObj(const Value &value);
   static AsasString* tryParseToStringObj(const Value &value);
+
+  static bool toBool(const Value &value);
 };
 
 void printValue(const Value &value);

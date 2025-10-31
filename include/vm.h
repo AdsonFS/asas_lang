@@ -15,9 +15,14 @@ enum InterpretResult {
 
 class CallFrame {
 public:
-  CallFrame(AsasFunction *function, size_t slotStartIndex)
-      : ip_(function->getChunk()->getCode().data()),
-        function_(function), slotStartIndex_(slotStartIndex) { }
+  // CallFrame(AsasFunction *function, size_t slotStartIndex)
+  //     : ip_(function->getChunk()->getCode().data()),
+  //       function_(function), slotStartIndex_(slotStartIndex) { }
+  CallFrame(AsasClosure *closure, size_t slotStartIndex)
+      : ip_(closure->getFunction()->getChunk()->getCode().data()),
+        closure_(closure),
+        function_(closure->getFunction()),
+        slotStartIndex_(static_cast<int>(slotStartIndex)) { }
 
   const uint8_t readByte() { return *ip_++; }
   const uint16_t readShort() { return (uint16_t)((readByte() << 8) | readByte()); }
@@ -36,6 +41,7 @@ public:
 
 private:
   const uint8_t *ip_;
+  AsasClosure *closure_;
   AsasFunction *function_;
   const int slotStartIndex_;
 };
@@ -48,7 +54,7 @@ public:
   int stackSize() const { return stack_.size(); }
 
   ~VM() {
-    for (AsasObject* obj : allocatedObjects_)
+    for (AsasObject *obj : allocatedObjects_)
       delete obj;
   }
 private:
@@ -70,7 +76,6 @@ private:
   Value peek(int distance = 0) {
     return stack_[stack_.size() - 1 - distance];
   }
-  bool callValue(const Value &callee, int argCount);
 
   Value runtimeError(const char *format, ...);
   void opEqual();
@@ -84,6 +89,9 @@ private:
   void opNot();
 
   void debugVM();
+  bool callValue(const Value &callee, int argCount);
+  bool handleNativeFunctionCall(AsasNativeFunction* nativeFn, int argCount);
+  bool handleClosureCall(AsasClosure* closure, int argCount);
 
   std::vector<AsasObject*> allocatedObjects_;
   template<typename T, typename... Args>

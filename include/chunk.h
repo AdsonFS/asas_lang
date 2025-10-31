@@ -28,6 +28,7 @@ enum OpCode : uint8_t {
   OP_JUMP_IF_FALSE,
   OP_LOOP,
   OP_CALL,
+  OP_CLOSURE,
   OP_RETURN,
 };
 

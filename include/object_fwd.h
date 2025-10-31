@@ -5,5 +5,6 @@
 class AsasObject;
 class AsasString;
 class AsasFunction;
+class AsasClosure;
 
 #endif // asas_object_fwd_h

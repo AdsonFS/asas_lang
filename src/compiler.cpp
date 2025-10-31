@@ -58,7 +58,7 @@ void Compiler::function(FunctionType type) {
   functionCompiler.block();
   
   AsasFunction* function = functionCompiler.endCompiler();
-  emitBytes(OP_CONSTANT, makeConstant(function));
+  emitBytes(OP_CLOSURE, makeConstant(function));
 
   parser_ = functionCompiler.parser_;
   scanner_ = functionCompiler.scanner_;
