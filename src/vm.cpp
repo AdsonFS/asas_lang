@@ -63,6 +63,16 @@ InterpretResult VM::run() {
       globals_[variableName] = peek();
       break;
     }
+    case OP_GET_UPVALUE: {
+      uint8_t slot = frame->readByte();
+      push(*frame->getClosure()->getUpvalueAt(slot)->getLocation());
+      break;
+    }
+    case OP_SET_UPVALUE: {
+      uint8_t slot = frame->readByte();
+      *frame->getClosure()->getUpvalueAt(slot)->getLocation() = peek();
+      break;
+    }
     case OP_GET_LOCAL: {
       uint8_t slot = frame->getSlot();
       push(stack_[slot]);
@@ -112,6 +122,23 @@ InterpretResult VM::run() {
       AsasFunction* fn = ValueHelper::toFunctionObj(constant);
       AsasClosure* closure = new AsasClosure(fn);
       push(closure);
+
+      for (int i = 0; i < fn->getUpvalueCount(); i++) {
+        uint8_t isLocal = frame->readByte();
+        uint8_t index = frame->readByte();
+        if (isLocal) {
+            Value* local = &stack_[frame->getSlotAt(index)];
+            closure->addUpvalue(captureUpvalue(local));
+          }
+        else
+          closure->addUpvalue(callFrames_.back().getClosure()->getUpvalueAt(index));
+      }
+
+      break;
+    }
+    case OP_CLOSE_UPVALUE: {
+      closeUpValue(&stack_.back());
+      pop();
       break;
     }
     case OP_RETURN: 
@@ -126,6 +153,20 @@ InterpretResult VM::run() {
       break;
     }
   }
+}
+
+void VM::closeUpValue(Value *value) {
+  if (!openUpvalues_.contains(value)) return;
+
+  AsasUpvalue* upvalue = openUpvalues_[value];
+  upvalue->close();
+  openUpvalues_.erase(&stack_.back());
+}
+
+AsasUpvalue* VM::captureUpvalue(Value* local) {
+  if (openUpvalues_.contains(local))
+    return openUpvalues_[local];
+  return openUpvalues_[local] = new AsasUpvalue(local);
 }
 
 bool VM::callValue(const Value &callee, int argCount) {

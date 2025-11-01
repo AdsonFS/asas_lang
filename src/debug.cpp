@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "chunk.h"
 #include "value.h"
+#include "object.h"
 
 void DebugChunk::disassembleChunk(const Chunk &chunk, const char *name) {
   printf("== %s ==\n", name);
@@ -34,6 +35,8 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   case OP_DEFINE_GLOBAL: return DebugChunk::constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
   case OP_GET_GLOBAL: return DebugChunk::constantInstruction("OP_GET_GLOBAL", chunk, offset);
   case OP_SET_GLOBAL: return DebugChunk::constantInstruction("OP_SET_GLOBAL", chunk, offset);
+  case OP_GET_UPVALUE: return DebugChunk::byteInstruction("OP_GET_UPVALUE", chunk, offset);
+  case OP_SET_UPVALUE: return DebugChunk::byteInstruction("OP_SET_UPVALUE", chunk, offset);
   case OP_GET_LOCAL: return DebugChunk::byteInstruction("OP_GET_LOCAL", chunk, offset);
   case OP_SET_LOCAL: return DebugChunk::byteInstruction("OP_SET_LOCAL", chunk, offset);
   case OP_EQUAL: return DebugChunk::simpleInstruction("OP_EQUAL", offset);
@@ -55,8 +58,19 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
     printf("%-16s %4d '", "OP_CLOSURE", constant);
     printValue(chunk.getConstantAt(constant));
     printf("'\n");
-    return offset + 2;
+
+    AsasFunction* function = ValueHelper::toFunctionObj(chunk.getConstantAt(constant));
+    for (int j = 0; j < function->getUpvalueCount(); j++) {
+      uint8_t isLocal = chunk.getChunkAt(offset + 2 + j * 2);
+      uint8_t index = chunk.getChunkAt(offset + 3 + j * 2);
+      printf("%04d      |                     %s %d\n",
+             offset + 2 + j * 2,
+             isLocal ? "local" : "upvalue", index);
+    }
+
+    return offset + 2 + function->getUpvalueCount() * 2;
   }
+  case OP_CLOSE_UPVALUE: return DebugChunk::simpleInstruction("OP_CLOSE_UPVALUE", offset);
   case OP_RETURN: return DebugChunk::simpleInstruction("OP_RETURN", offset);
   default:
     printf("Unknown opcode %d\n", instruction);

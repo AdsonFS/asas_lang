@@ -37,7 +37,7 @@ private:
 class AsasFunction : public AsasObject {
 public:
   AsasFunction(Chunk *chunk, std::string name = "")
-      : arity(0), name_(name), chunk_(chunk)
+      : arity(0), name_(name), chunk_(chunk), upvalueCount_(0)
   {
     refCountObjects_++;
   }
@@ -48,15 +48,16 @@ public:
   Chunk *getChunk() const { return chunk_; }
   
   void addInstruction(uint8_t instruction, int line) {
-    if (chunk_) {
-      chunk_->write(instruction, line);
-    }
+    if (chunk_) chunk_->write(instruction, line);
   }
+  int getUpvalueCount() const { return upvalueCount_; }
+  void incrementUpvalueCount() { upvalueCount_++; }
 
   int arity;
 private:
   std::string name_;
   Chunk *chunk_;
+  int upvalueCount_;
 
   inline static int refCountObjects_ = 0;
 };
@@ -83,6 +84,27 @@ private:
   inline static int refCountObjects_ = 0;
 };
 
+class AsasUpvalue : public AsasObject {
+public:
+  explicit AsasUpvalue(Value *location)
+      : location_(location)
+  {
+    refCountObjects_++;
+  }
+  ~AsasUpvalue() override { refCountObjects_--; }
+  static int getRefCountObjects()  { return refCountObjects_; }
+  Value* getLocation() const { return location_; }
+  void close() {
+    closedValue_ = *location_;
+    location_ = &closedValue_;
+  }
+
+private:
+  Value *location_;
+  Value closedValue_;
+  inline static int refCountObjects_ = 0;
+};
+
 class AsasClosure : public AsasObject {
 public:
   explicit AsasClosure(AsasFunction *function)
@@ -94,9 +116,16 @@ public:
   static int getRefCountObjects()  { return refCountObjects_; }
 
   AsasFunction* getFunction() const { return function_; }
+  void addUpvalue(AsasUpvalue* upvalue) {
+    upvalues_.push_back(upvalue);
+  }
+  AsasUpvalue* getUpvalueAt(int index) const {
+    return upvalues_[index];
+  }
 
 private:
   AsasFunction *function_;
+  std::vector<AsasUpvalue*> upvalues_;
   inline static int refCountObjects_ = 0;
 };
 

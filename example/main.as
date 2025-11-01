@@ -1,9 +1,19 @@
-func fib(n) {
-  if (n <= 1)
-    return n;
-  return fib(n - 1) + fib(n - 2);
+var globalOne;
+var globalTwo;
+
+func main() {
+  for (var a = 1; a <= 2; a = a + 1) {
+    func closure() {
+      print a;
+    }
+    if (globalOne == nil) {
+      globalOne = closure;
+    } else {
+      globalTwo = closure;
+    }
+  }
 }
 
-for (var i = 0; i < 10; i = i + 1) {
-  print("fib(" + i + ") = " + fib(i));
-}
+main();
+globalOne();
+globalTwo();

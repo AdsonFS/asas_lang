@@ -37,6 +37,7 @@ void Compiler::function(FunctionType type) {
   std::string functionName(parser_.previous.start, parser_.previous.length);
   Compiler functionCompiler(scanner_.getRemainingSource(), type, functionName);
   functionCompiler.parser_ = parser_;
+  functionCompiler.enclosing_ = this;
   
   functionCompiler.beginScope();
   functionCompiler.consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
@@ -59,6 +60,11 @@ void Compiler::function(FunctionType type) {
   
   AsasFunction* function = functionCompiler.endCompiler();
   emitBytes(OP_CLOSURE, makeConstant(function));
+
+  for (auto &upvalue : functionCompiler.upvalues_) {
+    emitByte(upvalue.isLocal);
+    emitByte(upvalue.index);
+  }
 
   parser_ = functionCompiler.parser_;
   scanner_ = functionCompiler.scanner_;
@@ -315,7 +321,11 @@ void Compiler::namedVariable(const Token &name, bool canAssign) {
   if (argumentIndex != -1) {
     getOp = OP_GET_LOCAL;
     setOp = OP_SET_LOCAL;
-  } else {
+  } else if ((argumentIndex = resolveUpvalue(name)) != -1) {
+    getOp = OP_GET_UPVALUE;
+    setOp = OP_SET_UPVALUE;
+  }
+  else {
     argumentIndex = identifierConstant(name);
     getOp = OP_GET_GLOBAL;
     setOp = OP_SET_GLOBAL;
@@ -327,11 +337,36 @@ void Compiler::namedVariable(const Token &name, bool canAssign) {
   } else emitBytes(getOp, (uint8_t)argumentIndex);
 }
 
-void Compiler::string(bool) {
-  // Trim the surrounding quotes.
-  std::string str(parser_.previous.start + 1, parser_.previous.length - 2);
-  AsasString* stringObj = new AsasString(str.c_str());
-  emitConstant(stringObj);
+int Compiler::resolveUpvalue(const Token &name) {
+  if (enclosing_ == nullptr) return -1;
+
+  int localIndex = enclosing_->resolveLocal(name);
+  if (localIndex != -1) {
+    enclosing_->locals_[localIndex].isCaptured = true;
+    return addUpvalue((uint8_t)localIndex, true);
+  }
+
+  int upvalueIndex = enclosing_->resolveUpvalue(name);
+  if (upvalueIndex != -1)
+    return addUpvalue((uint8_t)upvalueIndex, false);
+
+  return -1;
+}
+
+int Compiler::addUpvalue(uint8_t index, bool isLocal) {
+  for (int i = 0; i < upvalues_.size(); i++)
+    if (upvalues_[i].index == index && upvalues_[i].isLocal == isLocal)
+      return i;
+
+  if (upvalues_.size() == 256) {
+    error("Too many closure variables in function.");
+    return 0;
+  }
+
+  upvalues_.push_back(Upvalue(index, isLocal));
+  currentFunction_->incrementUpvalueCount();
+
+  return upvalues_.size() - 1;
 }
 
 int Compiler::resolveLocal(const Token &name) {
@@ -344,6 +379,13 @@ int Compiler::resolveLocal(const Token &name) {
     }
 
   return -1;
+}
+
+void Compiler::string(bool) {
+  // Trim the surrounding quotes.
+  std::string str(parser_.previous.start + 1, parser_.previous.length - 2);
+  AsasString* stringObj = new AsasString(str.c_str());
+  emitConstant(stringObj);
 }
 
 void Compiler::literal(bool) {
@@ -462,7 +504,9 @@ void Compiler::endScope() {
   scopeDepth_--;
 
   while (!locals_.empty() && locals_.back().depth > scopeDepth_) {
-    emitByte(OP_POP);
+    if (locals_.back().isCaptured) emitByte(OP_CLOSE_UPVALUE);
+    else emitByte(OP_POP);
+
     locals_.pop_back();
   }
 }

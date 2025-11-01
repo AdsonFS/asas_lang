@@ -23,14 +23,23 @@ enum Precedence {
 class LocalVariable {
 public:
   LocalVariable(Token name, int depth)
-      : name(name), depth(depth) {}
+      : name(name), depth(depth), isCaptured(false) {}
   Token name;
   int depth;
+  bool isCaptured;
 };
 
 enum FunctionType {
   FUNCTION,
   SCRIPT
+};
+
+class Upvalue {
+public:
+  Upvalue(uint8_t index, bool isLocal)
+      : index(index), isLocal(isLocal) {}
+  uint8_t index;
+  bool isLocal;
 };
 
 class Parser {
@@ -46,8 +55,8 @@ public:
 class Compiler {
 public:
   Compiler(const char *source, FunctionType type = SCRIPT, std::string functionName = "")
-      : scanner_(source), currentFunction_(new AsasFunction(new Chunk(), functionName)),
-        currentFunctionType_(type)
+      : scanner_(source), enclosing_(nullptr),
+        currentFunction_(new AsasFunction(new Chunk(), functionName)), currentFunctionType_(type)
   {
     Token token(TOKEN_FUNC, "func_main", 0, 0);
     locals_.push_back(LocalVariable(token, 0));
@@ -87,14 +96,16 @@ public:
   void andOperator(bool canAssign);
   void orOperator(bool canAssign);
 
-private:
-  // Chunk &chunk_;
-  // Chunk &compilingChunk_;
-  Scanner scanner_;
-  Parser parser_;
-  AsasFunction* currentFunction_;
-  FunctionType currentFunctionType_;
+  int resolveUpvalue(const Token &name);
+  int addUpvalue(uint8_t index, bool isLocal);
 
+private:
+  Parser parser_;
+  Scanner scanner_;
+  Compiler *enclosing_;
+  AsasFunction* currentFunction_;
+  std::vector<Upvalue> upvalues_;
+  FunctionType currentFunctionType_;
   std::vector<LocalVariable> locals_;
   int scopeDepth_ = 0;
 

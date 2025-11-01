@@ -7,6 +7,8 @@
 #include <stack>
 #include <unordered_map>
 
+#define STACK_MAX 256
+
 enum InterpretResult {
   INTERPRET_OK,
   INTERPRET_COMPILE_ERROR,
@@ -28,7 +30,8 @@ public:
   const uint16_t readShort() { return (uint16_t)((readByte() << 8) | readByte()); }
   const Value readConstant() { return function_->getChunk()->getConstantAt(readByte()); }
   const void incrementIP(int offset) { ip_ += offset; }
-  const uint8_t getSlot() { return readByte() + slotStartIndex_ + 0; }
+  const uint8_t getSlot() { return readByte() + slotStartIndex_; }
+  uint8_t getSlotAt(int index) { return slotStartIndex_ + index; }
   const void debugCF() {
     size_t offset = static_cast<size_t>(ip_ - function_->getChunk()->getCode().data());
     DebugChunk::disassembleInstruction(*function_->getChunk(), offset);
@@ -37,7 +40,8 @@ public:
     size_t offset = static_cast<size_t>(ip_ - function_->getChunk()->getCode().data()) - 1;
     return function_->getChunk()->getLineAt(offset);
   }
-  AsasFunction* getFunction() { return function_; }
+  AsasFunction* getFunction() const { return function_; }
+  AsasClosure* getClosure() const { return closure_; }
 
 private:
   const uint8_t *ip_;
@@ -48,8 +52,7 @@ private:
 
 class VM {
 public:
-  // VM() : ip_(nullptr) {}
-  // VM(Chunk chunk) : chunk_(chunk), ip_(chunk_.getCode().data()) {}
+  VM() { stack_.reserve(static_cast<size_t>(STACK_MAX)); }
   InterpretResult interpret(const char *source);
   int stackSize() const { return stack_.size(); }
 
@@ -63,11 +66,18 @@ private:
   std::vector<Value> stack_;
   std::vector<CallFrame> callFrames_;
   std::unordered_map<std::string, Value> globals_;
+  std::unordered_map<Value*, AsasUpvalue*> openUpvalues_;
 
   InterpretResult run();
 
+  void closeUpValue(Value* value);
   void defineNativeFunctions();
-  void push(const Value &value) { stack_.push_back(value); }
+  AsasUpvalue* captureUpvalue(Value* local);
+  void push(const Value &value) { 
+    if (stack_.size() >= STACK_MAX) 
+      return void(runtimeError("Stack overflow."));
+    stack_.push_back(value);
+  }
   Value pop() {
     Value value = stack_.back();
     stack_.pop_back();
