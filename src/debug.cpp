@@ -9,8 +9,11 @@ void DebugChunk::disassembleChunk(const Chunk &chunk, const char *name) {
   for (size_t offset = 0; offset < chunk.getCode().size();)
     offset = DebugChunk::disassembleInstruction(chunk, offset);
 }
-int DebugChunk::disassembleInstruction(const Chunk &chunk, int offset) {
-  printf("\033[1;33m");
+int DebugChunk::disassembleInstruction(const Chunk &chunk, int offset, int nestedLevel) {
+  int colors[] = {33, 37, 31, 34, 35, 36}; 
+  int colorCode = colors[nestedLevel % 6];
+  printf("\033[1;%dm", colorCode);
+  // printf("\033[1;33m");
   offset = DebugChunk::disassembleInstruction_(chunk, offset);
   printf("\033[0m");
   return offset;
@@ -32,6 +35,7 @@ int DebugChunk::disassembleInstruction_(const Chunk &chunk, int offset) {
   case OP_TRUE: return DebugChunk::simpleInstruction("OP_TRUE", offset);
   case OP_FALSE: return DebugChunk::simpleInstruction("OP_FALSE", offset);
   case OP_POP: return DebugChunk::simpleInstruction("OP_POP", offset);
+  case OP_POP_UNTIL: return DebugChunk::byteInstruction("OP_POP_UNTIL", chunk, offset);
   case OP_DEFINE_GLOBAL: return DebugChunk::constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
   case OP_GET_GLOBAL: return DebugChunk::constantInstruction("OP_GET_GLOBAL", chunk, offset);
   case OP_SET_GLOBAL: return DebugChunk::constantInstruction("OP_SET_GLOBAL", chunk, offset);

@@ -9,6 +9,7 @@ enum OpCode : uint8_t {
   OP_TRUE,
   OP_FALSE,
   OP_POP,
+  OP_POP_UNTIL,
   OP_DEFINE_GLOBAL,
   OP_GET_GLOBAL,
   OP_SET_GLOBAL,
@@ -51,10 +52,7 @@ public:
   const std::vector<uint8_t> &getCode() const { return code_; }
   void setAt(size_t index, uint8_t byte) { code_[index] = byte; }
 
-  // ~Chunk() = default;
-  ~Chunk() {
-    printf("Destroying Chunk with %zu constants.\n", constants_.size());
-  }
+  ~Chunk() = default;
 
 private:
   std::vector<uint8_t> code_;

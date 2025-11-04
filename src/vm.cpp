@@ -6,11 +6,11 @@
 
 InterpretResult VM::interpret(const char *source) {
   Compiler compiler(source);
-  AsasFunction* function = compiler.compile();
+  AsasFunction* function = mapObject(compiler.compile());
   if (function == nullptr)
     return INTERPRET_COMPILE_ERROR;
 
-  AsasClosure* closure = new AsasClosure(function);
+  AsasClosure* closure = allocateObject<AsasClosure>(function);
   // push(function);
   // callFrames_.push_back(CallFrame{function, 0});
 
@@ -28,7 +28,7 @@ InterpretResult VM::run() {
   for (;;) {
     CallFrame *frame = &callFrames_.back();
 #ifdef DEBUG_TRACE_EXECUTION
-    // debugVM();
+    debugVM();
 #endif
     uint8_t instruction;
     switch (instruction = frame->readByte()) {
@@ -37,6 +37,11 @@ InterpretResult VM::run() {
     case OP_TRUE: push(true); break;
     case OP_FALSE: push(false); break;
     case OP_POP: pop(); break;
+    case OP_POP_UNTIL: {
+      uint8_t slot = frame->getSlot();
+      while (stack_.size() > slot) pop();
+      break;
+    }
     case OP_DEFINE_GLOBAL: {
       const Value& constant = frame->readConstant();
       AsasString* value = ValueHelper::toStringObj(constant);
@@ -70,7 +75,8 @@ InterpretResult VM::run() {
     }
     case OP_SET_UPVALUE: {
       uint8_t slot = frame->readByte();
-      *frame->getClosure()->getUpvalueAt(slot)->getLocation() = peek();
+      // *frame->getClosure()->getUpvalueAt(slot)->getLocation() = peek();
+      frame->getClosure()->setUpValueAt(slot, peek());
       break;
     }
     case OP_GET_LOCAL: {
@@ -120,16 +126,18 @@ InterpretResult VM::run() {
     case OP_CLOSURE: {
       const Value& constant = frame->readConstant();
       AsasFunction* fn = ValueHelper::toFunctionObj(constant);
-      AsasClosure* closure = new AsasClosure(fn);
+      AsasClosure* closure = allocateObject<AsasClosure>(fn);
       push(closure);
 
       for (int i = 0; i < fn->getUpvalueCount(); i++) {
         uint8_t isLocal = frame->readByte();
         uint8_t index = frame->readByte();
         if (isLocal) {
-            Value* local = &stack_[frame->getSlotAt(index)];
-            closure->addUpvalue(captureUpvalue(local));
-          }
+          Value* local = &stack_[frame->getSlotAt(index)];
+          // Value* local = new Value(stack_[frame->getSlotAt(index)]);
+          markSlot(static_cast<int>(frame->getSlotAt(index)));
+          closure->addUpvalue(captureUpvalue(local));
+        }
         else
           closure->addUpvalue(callFrames_.back().getClosure()->getUpvalueAt(index));
       }
@@ -147,7 +155,8 @@ InterpretResult VM::run() {
         pop();
         return INTERPRET_OK;
       }
-      for (size_t i = frame->getFunction()->arity + 1; i > 0; i--) pop();
+      // for (size_t i = frame->getFunction()->arity + 1; i > 0; i--) pop();
+      for (size_t i = stack_.size() - frame->getSlotStartIndex(); i > 0; i--) pop();
       callFrames_.pop_back();
       push(result);
       break;
@@ -200,7 +209,6 @@ bool VM::handleClosureCall(AsasClosure* closure, int argCount) {
 
   if (callFrames_.size() >= 256) { runtimeError("Stack overflow."); return false; }
   callFrames_.push_back(CallFrame{
-    // functionValue,
     closure,
     (stack_.size()) - argCount - 1 // -1 for the function itself
   });
@@ -224,7 +232,7 @@ void VM::debugVM() {
     printValue(" [ ", value, " ]");
   printf("\n");
 
-  callFrames_.back().debugCF();
+  callFrames_.back().debugCF(callFrames_.size() - 1);
 }
 
 Value VM::runtimeError(const char *format, ...) {

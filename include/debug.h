@@ -7,7 +7,7 @@
 class DebugChunk {
 public:
   static void disassembleChunk(const Chunk &chunk, const char *name);
-  static int disassembleInstruction(const Chunk &chunk, int offset);
+  static int disassembleInstruction(const Chunk &chunk, int offset, int nestedLevel = 0);
 
 private:
   static int disassembleInstruction_(const Chunk &chunk, int offset);

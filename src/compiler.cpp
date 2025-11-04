@@ -268,7 +268,8 @@ void Compiler::printStatement() {
 void Compiler::expressionStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
-  emitByte(OP_POP);
+  emitByte(OP_POP_UNTIL);
+  emitByte(locals_.size());
 }
 
 void Compiler::expression() {

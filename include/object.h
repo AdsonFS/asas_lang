@@ -41,7 +41,7 @@ public:
   {
     refCountObjects_++;
   }
-  ~AsasFunction() override { refCountObjects_--; }
+  ~AsasFunction() override { refCountObjects_--; delete chunk_; }
   static int getRefCountObjects()  { return refCountObjects_; }
 
   std::string getName() const { return name_; }
@@ -94,6 +94,7 @@ public:
   ~AsasUpvalue() override { refCountObjects_--; }
   static int getRefCountObjects()  { return refCountObjects_; }
   Value* getLocation() const { return location_; }
+  void setLocation(Value location) { *location_ = location; }
   void close() {
     closedValue_ = *location_;
     location_ = &closedValue_;
@@ -119,9 +120,14 @@ public:
   void addUpvalue(AsasUpvalue* upvalue) {
     upvalues_.push_back(upvalue);
   }
+  void setUpValueAt(int index, Value value) {
+    upvalues_[index]->setLocation(value);
+  }
+
   AsasUpvalue* getUpvalueAt(int index) const {
     return upvalues_[index];
   }
+  const std::vector<AsasUpvalue*>& getUpvalues() const { return upvalues_; }
 
 private:
   AsasFunction *function_;
