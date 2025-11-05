@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Opções de build
 option(ENABLE_TRACE "Enable execution tracing" OFF)
 option(ENABLE_WARNINGS "Enable extra compiler warnings" ON)
+option(ENABLE_GC_LOGGING "Enable garbage collection logging" OFF)
 
 # Defina tipos de build padrão (Debug / Release)
 if(NOT CMAKE_BUILD_TYPE)
@@ -39,6 +40,11 @@ if(ENABLE_TRACE)
     target_compile_definitions(asas_lib PUBLIC DEBUG_TRACE_EXECUTION)
 endif()
 
+# Define DEBUG_LOG_GC se habilitado
+if(ENABLE_GC_LOGGING)
+    target_compile_definitions(asas_lib PUBLIC DEBUG_LOG_GC)
+endif()
+
 # Cria o executável principal
 add_executable(asas main.cpp)
 target_link_libraries(asas PRIVATE asas_lib)
@@ -50,6 +56,10 @@ endif()
 
 if(ENABLE_TRACE)
     target_compile_definitions(asas PRIVATE DEBUG_TRACE_EXECUTION)
+endif()
+
+if(ENABLE_GC_LOGGING)
+    target_compile_definitions(asas PRIVATE DEBUG_LOG_GC)
 endif()
 
 # Habilita testes

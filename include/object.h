@@ -9,7 +9,16 @@
 
 class AsasObject {
 public:
-  virtual ~AsasObject() = default;
+  AsasObject() { refCountObjects_++; }
+  virtual ~AsasObject() { refCountObjects_--; }
+  static int getRefCountObjects()  { return refCountObjects_; }
+  bool isMarked() const { return isMarked_; }
+  void mark() { isMarked_ = true; }
+  void unmark() { isMarked_ = false; }
+
+private:
+  bool isMarked_ = false;
+  inline static int refCountObjects_ = 0;
 };
 
 class AsasString : public AsasObject {

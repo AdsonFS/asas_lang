@@ -51,6 +51,8 @@ public:
   const int &getLineAt(size_t index) const { return lines_[index]; }
   const std::vector<uint8_t> &getCode() const { return code_; }
   void setAt(size_t index, uint8_t byte) { code_[index] = byte; }
+  // std::vector<Value>& &getConstants() { return constants_.getValues();}
+  const std::vector<Value>& getConstants() { return constants_.getValues();}
 
   ~Chunk() = default;
 

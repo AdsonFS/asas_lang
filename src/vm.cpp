@@ -6,11 +6,16 @@
 
 InterpretResult VM::interpret(const char *source) {
   Compiler compiler(source);
-  AsasFunction* function = mapObject(compiler.compile());
+  // AsasFunction* function = traceObject(compiler.compile());
+  // AsasFunction* function = traceObject(compiler.compile());
+  // TODO -> use traceObject
+  AsasFunction* function = compiler.compile();
   if (function == nullptr)
     return INTERPRET_COMPILE_ERROR;
 
-  AsasClosure* closure = allocateObject<AsasClosure>(function);
+  // AsasClosure* closure = allocateObject<AsasClosure>(function);
+  // TODO -> use allocateObject
+  AsasClosure* closure = new AsasClosure(function);
   // push(function);
   // callFrames_.push_back(CallFrame{function, 0});
 
@@ -20,6 +25,8 @@ InterpretResult VM::interpret(const char *source) {
   // DebugChunk::disassembleChunk(*function->getChunk(), "code");
 
   defineNativeFunctions();
+  
+ printf("=== VM started ===\n"); 
   return run();
 }
 
@@ -28,7 +35,7 @@ InterpretResult VM::run() {
   for (;;) {
     CallFrame *frame = &callFrames_.back();
 #ifdef DEBUG_TRACE_EXECUTION
-    debugVM();
+    // debugVM();
 #endif
     uint8_t instruction;
     switch (instruction = frame->readByte()) {
@@ -126,7 +133,9 @@ InterpretResult VM::run() {
     case OP_CLOSURE: {
       const Value& constant = frame->readConstant();
       AsasFunction* fn = ValueHelper::toFunctionObj(constant);
-      AsasClosure* closure = allocateObject<AsasClosure>(fn);
+      // AsasClosure* closure = allocateObject<AsasClosure>(fn);
+      // TODO -> use allocateObject
+      AsasClosure* closure = new AsasClosure(fn);
       push(closure);
 
       for (int i = 0; i < fn->getUpvalueCount(); i++) {

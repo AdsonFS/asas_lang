@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "object.h"
 #include <bitset>
+#include <set>
 #include <stack>
 #include <unordered_map>
 
@@ -50,44 +51,6 @@ private:
   AsasClosure *closure_;
   AsasFunction *function_;
   const int slotStartIndex_;
-};
-class VMStack {
-public:
-  VMStack() {
-    stack_.reserve(static_cast<size_t>(STACK_MAX));
-  }
-  size_t size() const { return static_cast<int>(stack_.size()); }
-  void push(const Value &value) { 
-    // [TODO] -> fix runtimeError
-    // if (stack_.size() >= STACK_MAX) 
-      // return void(runtimeError("Stack overflow."));
-    stack_.emplace_back(value, idSlot_++);
-  }
-  std::pair<Value, int>& at(int index) {
-    return stack_[index];
-  }
-  Value getAt(int index) const {
-    return stack_[index].first;
-  }
-  void setAt(int index, const Value &value) {
-    stack_[index].first = value;
-  }
-  Value pop() {
-    Value value = stack_.back().first;
-    stack_.pop_back();
-    return value;
-  }
-  Value peek(int distance = 0) {
-    return stack_[stack_.size() - 1 - distance].first;
-  }
-  Value &topRef() {
-    return stack_.back().first;
-  }
-  void clear() { stack_.clear(); }
-
-private:
-  std::vector<std::pair<Value, int>> stack_;
-  inline static int idSlot_ = 0;
 };
 
 class VM {
@@ -158,19 +121,48 @@ private:
   bool handleClosureCall(AsasClosure* closure, int argCount);
 
   // garbage collection
-  std::vector<AsasObject*> allocatedObjects_;
+  std::set<AsasObject*> allocatedObjects_;
+
   template<typename T, typename... Args>
   T* allocateObject(Args&&... args) {
     T* object = new T(std::forward<Args>(args)...);
-    allocatedObjects_.push_back(object);
+    allocatedObjects_.insert(object);
+
+  #ifdef DEBUG_LOG_GC
+    printf("Allocated object %p of type %s, size %zu\n", 
+           (void*)object, typeid(T).name(), sizeof(T));
+  #endif
+
+    // push object to stack to avoid being collected immediately
+    // push(reinterpret_cast<Value>(object));
+    // AsasObject* objPtr = reinterpret_cast<AsasObject*>(object);
+    push(reinterpret_cast<AsasObject*>(object));
+    // TODO: trigger garbage collection based on some threshold
+    collectGarbage();
+
+
+    pop();
+
     return object;
   }
   template<typename T>
-  T* mapObject(T* object) {
-    allocatedObjects_.push_back(object);
+  T* traceObject(T* object) {
+    allocatedObjects_.insert(object);
+#ifdef DEBUG_LOG_GC
+    printf("Traced object %p of type %s, size %zu\n", 
+           (void*)object, typeid(T).name(), sizeof(T));
+#endif
+
+    push(reinterpret_cast<AsasObject*>(object));
+    collectGarbage();
+    pop();
     return object;
   }
   void collectGarbage();
+  void markRoots();
+  void markValue(Value *value);
+  void freeObjects();
+  int instructionCount_ = 0;
 
 };
 
