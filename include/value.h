@@ -30,7 +30,8 @@ public:
   size_t size() const { return values_.size(); }
   std::vector<Value>& getValues() { return values_; }
 
-  ~DataValue();
+  // ~DataValue();
+  ~DataValue() = default;
 
 private:
   std::vector<Value> values_;

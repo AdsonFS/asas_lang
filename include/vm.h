@@ -4,6 +4,7 @@
 #include "chunk.h"
 #include "debug.h"
 #include "object.h"
+#include <algorithm>
 #include <bitset>
 #include <set>
 #include <stack>
@@ -62,8 +63,48 @@ public:
   int stackSize() const { return stack_.size(); }
 
   ~VM() {
-    for (AsasObject *obj : allocatedObjects_)
+    int cnt = 0;
+    std::vector<Chunk*> tempChunks;
+    // std::vector<AsasObject*> tempObjects;
+    printf("OpenValues remaining: %zu\n", openUpvalues_.size());
+    printf("Globals remaining: %zu\n", globals_.size());
+    // for (const auto& [name, value] : globals_) {
+    //   // cnt++;
+    //   // printf("Global %d: %s\n", cnt, name.c_str());
+    //   if (auto objPtr = std::get_if<AsasObject*>(&value)) {
+    //     // tempObjects.push_back(*objPtr);
+    //     if (auto fn = dynamic_cast<AsasFunction*>(*objPtr))
+    //       tempChunks.push_back(fn->getChunk());
+    //     AsasObject* obj = *objPtr;
+    //     allocatedObjects_.erase(obj);
+    //     // delete *objPtr;
+    //     delete obj;
+    //     // *objPtr = nullptr;
+    //     obj = nullptr;
+    //   }
+    // }
+    printf("Allocated objects remaining: %zu\n", allocatedObjects_.size());
+    for (AsasObject *obj : allocatedObjects_) {
+      printf("\nFreeing object %p of type %s\n", (void*)obj, typeid(*obj).name());
+      if (auto fn = dynamic_cast<AsasFunction*>(obj))
+        tempChunks.push_back(fn->getChunk());
+      printf("->> ");
+
       delete obj;
+      obj = nullptr;
+    }
+    printf("Deleting %zu chunks\n", tempChunks.size());
+    for (Chunk* chunk : tempChunks)
+      delete chunk;
+
+    printf("Asas Objects remaining after VM destruction: %d\n", AsasObject::getRefCountObjects());
+    printf("Asas Strings remaining after VM destruction: %d\n", AsasString::getRefCountObjects());
+    printf("Asas Upvalues remaining after VM destruction: %d\n", AsasUpvalue::getRefCountObjects());
+    printf("Asas Functions remaining after VM destruction: %d\n", AsasFunction::getRefCountObjects());
+    printf("Asas NativeFunctions remaining after VM destruction: %d\n", AsasNativeFunction::getRefCountObjects());
+    printf("Asas Closures remaining after VM destruction: %d\n", AsasClosure::getRefCountObjects());
+
+    printf("VM destroyed.\n");
   }
 private:
   // Chunk chunk_;
@@ -123,14 +164,19 @@ private:
   // garbage collection
   std::set<AsasObject*> allocatedObjects_;
 
+  // template<typename T, typename... Args>
+  // template T shoud be derived from AsasObject
   template<typename T, typename... Args>
   T* allocateObject(Args&&... args) {
     T* object = new T(std::forward<Args>(args)...);
     allocatedObjects_.insert(object);
 
   #ifdef DEBUG_LOG_GC
+    AsasObject* objPtr = reinterpret_cast<AsasObject*>(object);
+    Value v = objPtr;
     printf("Allocated object %p of type %s, size %zu\n", 
            (void*)object, typeid(T).name(), sizeof(T));
+    printValue("Allocated object: ", v, "\n\n");
   #endif
 
     // push object to stack to avoid being collected immediately
@@ -149,8 +195,14 @@ private:
   T* traceObject(T* object) {
     allocatedObjects_.insert(object);
 #ifdef DEBUG_LOG_GC
+    AsasObject* objPtr = reinterpret_cast<AsasObject*>(object);
+    Value v = objPtr;
+    // print in yellow color
+    printf("\033[0;33m");
     printf("Traced object %p of type %s, size %zu\n", 
            (void*)object, typeid(T).name(), sizeof(T));
+    printValue("Traced object: ", v, "\n\n");
+    printf("\033[0m");
 #endif
 
     push(reinterpret_cast<AsasObject*>(object));
@@ -159,8 +211,11 @@ private:
     return object;
   }
   void collectGarbage();
+  void setupGarbageCollector(AsasObject* rootScript);
+
   void markRoots();
-  void markValue(Value *value);
+  void markValue(Value *value, bool traceObject);
+  void markObject(AsasObject *object, bool traceObject);
   void freeObjects();
   int instructionCount_ = 0;
 

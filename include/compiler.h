@@ -54,9 +54,10 @@ public:
 
 class Compiler {
 public:
-  Compiler(const char *source, FunctionType type = SCRIPT, std::string functionName = "")
+  Compiler(const char *source, AsasString *fnName, FunctionType type = SCRIPT)
       : scanner_(source), enclosing_(nullptr),
-        currentFunction_(new AsasFunction(new Chunk(), functionName)), currentFunctionType_(type)
+        currentFunction_(new AsasFunction(new Chunk(), fnName)), 
+        currentFunctionType_(type)
   {
     Token token(TOKEN_FUNC, "func_main", 0, 0);
     locals_.push_back(LocalVariable(token, 0));

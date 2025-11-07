@@ -9,6 +9,12 @@
 class AsasFixture {
 public:
   static std::pair<InterpretResult, std::string> runSourceWithSuccess(const char *source) {
+    AsasObject::resetRefCounts();
+    AsasString::resetRefCounts();
+    AsasFunction::resetRefCounts();
+    AsasUpvalue::resetRefCounts();
+    AsasClosure::resetRefCounts();
+
     VM* vm = new VM();
     testing::internal::CaptureStdout();
     InterpretResult result = vm->interpret(source);

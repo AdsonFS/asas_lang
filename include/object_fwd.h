@@ -2,6 +2,7 @@
 #define asas_object_fwd_h
 
 // Forward declarations for breaking circular dependencies
+// class AsasWrapper;
 class AsasObject;
 class AsasString;
 class AsasFunction;

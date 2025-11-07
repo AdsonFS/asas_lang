@@ -81,6 +81,8 @@ void printValue(const Value &value) {
       else
         printf("<unknown object>");
     }
+    else
+      throw std::runtime_error("Unknown type in Value variant");
   }, value);
 }
 
@@ -90,9 +92,17 @@ void printValue(const char* left, const Value &value, const char* right) {
   printf("%s", right);
 }
 
-DataValue::~DataValue() {
-  for (const Value &value : values_) {
-    if (auto objPtr = std::get_if<AsasObject*>(&value))
-      delete *objPtr;
-  }
-}
+// DataValue::~DataValue() {
+//   for (const Value &value : values_)
+//     if (auto objPtr = std::get_if<AsasObject*>(&value)) {
+//       if (objPtr != nullptr) {
+//         printf("Deleting object %p of type  from DataValue\n", (void*)*objPtr);
+//         // allocatedObjects_.erase(*objPtr);
+//         delete *objPtr;
+//       } else {
+//         printf("Object pointer is nullptr in DataValue destructor\n");
+//       }
+//
+//     }
+//       // delete *objPtr;
+// }

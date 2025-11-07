@@ -34,8 +34,8 @@ void Compiler::functionDeclaration() {
 }
 
 void Compiler::function(FunctionType type) {
-  std::string functionName(parser_.previous.start, parser_.previous.length);
-  Compiler functionCompiler(scanner_.getRemainingSource(), type, functionName);
+  AsasString* functionName = new AsasString(parser_.previous.start, parser_.previous.length);
+  Compiler functionCompiler(scanner_.getRemainingSource(), functionName, type);
   functionCompiler.parser_ = parser_;
   functionCompiler.enclosing_ = this;
   
@@ -145,7 +145,7 @@ void Compiler::addLocal(const Token &name) {
 };
 
 uint8_t Compiler::identifierConstant(const Token &name) {
-  return makeConstant(new AsasString(std::string(name.start, name.length).c_str()));
+  return makeConstant(new AsasString(name.start, name.length));
 }
 
 void Compiler::markInitialized() {
@@ -384,8 +384,7 @@ int Compiler::resolveLocal(const Token &name) {
 
 void Compiler::string(bool) {
   // Trim the surrounding quotes.
-  std::string str(parser_.previous.start + 1, parser_.previous.length - 2);
-  AsasString* stringObj = new AsasString(str.c_str());
+  AsasString* stringObj = new AsasString(parser_.previous.start + 1, parser_.previous.length - 2);
   emitConstant(stringObj);
 }
 

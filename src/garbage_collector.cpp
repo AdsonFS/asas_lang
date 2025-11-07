@@ -16,52 +16,69 @@ void VM::collectGarbage() {
 
 void VM::markRoots() {
   for (Value &value : stack_)
-    markValue(&value);
+    markValue(&value, false);
   for (auto &[name, value] : globals_)
-    markValue(&value);
+    markValue(&value, false);
+  // for (auto &[name, upvalue] : openUpvalues_)
+    // markObject(upvalue);
   for (CallFrame &frame : callFrames_) {
     AsasClosure* closure = frame.getClosure();
-    markValue(reinterpret_cast<Value*>(&closure));
+    markObject(closure, false);
+    // markValue(reinterpret_cast<Value*>(&closure));
     for (AsasUpvalue* upvalue : closure->getUpvalues()) {
-      markValue(reinterpret_cast<Value*>(&upvalue));
+      // markValue(reinterpret_cast<Value*>(&upvalue));
+      markObject(upvalue, false);
     }
-    markValue(reinterpret_cast<Value*>(closure->getFunction()));
+    // markValue(reinterpret_cast<Value*>(closure->getFunction()));
+    markObject(closure->getFunction(), false);
   }
 }
 
-void VM::markValue(Value *value) {
-  auto object = std::get_if<AsasObject*>(value);
-  if (object == nullptr || (*object)->isMarked()) return;
+void VM::setupGarbageCollector(AsasObject* rootScript) {
+  markObject(rootScript, true);
+}
 
-#ifdef DEBUG_LOG_GC
-  printf("Marking object %p of type %s\n", (void*)*object, typeid(**object).name());
-  printValue("Value to mark: ", *value, "\n");
-#endif
-
-  (*object)->mark();
-  std::visit([this](auto &&v) {
+void VM::markValue(Value *value, bool traceObject) {
+  std::visit([this, traceObject](auto &&v) {
     using V = std::decay_t<decltype(v)>;
-    if constexpr (std::is_same_v<V, AsasObject*>) {
-      if (v == nullptr) return;
-
-      if (auto str = dynamic_cast<AsasString*>(v))
-        return void (markValue(reinterpret_cast<Value*>(&str)));
-      if (auto func = dynamic_cast<AsasFunction*>(v)) {
-        for (const Value &constant : func->getChunk()->getConstants())
-          markValue(const_cast<Value*>(&constant));
-        return;
-      }
-      if (auto upvalue = dynamic_cast<AsasUpvalue*>(v))
-        return (markValue(upvalue->getLocation()));
-      if (auto closure = dynamic_cast<AsasClosure*>(v)) {
-        markValue(reinterpret_cast<Value*>(closure->getFunction()));
-        for (AsasUpvalue* upvalue : closure->getUpvalues())
-          markValue(reinterpret_cast<Value*>(&upvalue));
-        return;
-      }
-    }
+    if constexpr (std::is_same_v<V, AsasObject*>)
+      markObject(v, traceObject);
   }, *value);
 }
+
+void VM::markObject(AsasObject *object, bool traceObject) {
+  if (object == nullptr || object->isMarked()) return;
+  object->mark();
+  if (traceObject) allocatedObjects_.insert(object);
+
+#ifdef DEBUG_LOG_GC
+  printf("\033[0;35m");
+  printf("Marking object %p of type %s\n", (void*)object, typeid(*object).name());
+  printf("\033[0m");
+  // printValue("Value to mark: ", *reinterpret_cast<Value*>(object), "\n");
+#endif
+
+  if (auto fn = dynamic_cast<AsasFunction*>(object)) {
+    // markValue(reinterpret_cast<Value*>(fn->getAsasStringName()));
+    markObject(fn->getAsasStringName(), traceObject);
+    for (const Value &constant : fn->getChunk()->getConstants())
+      markValue(const_cast<Value*>(&constant), traceObject);
+      // markValue(const_cast<Value*>(&constant));
+      // markValue(const_cast<Value*>(&constant));
+    return;
+  }
+  if (auto upvalue = dynamic_cast<AsasUpvalue*>(object)) {
+    markValue(upvalue->getLocation(), traceObject);
+    return;
+  }
+  if (auto closure = dynamic_cast<AsasClosure*>(object)) {
+    markObject(closure->getFunction(), traceObject);
+    for (AsasUpvalue* upvalue : closure->getUpvalues())
+      markObject(upvalue, traceObject);
+    return;
+  }
+}
+
 
 void VM::freeObjects() {
   for (auto it = allocatedObjects_.begin(); it != allocatedObjects_.end(); ) {
@@ -70,12 +87,10 @@ void VM::freeObjects() {
     else {
 #ifdef DEBUG_LOG_GC
       printf("Freeing object %p of type %s\n", (void*)obj, typeid(*obj).name());
-      if (auto str = dynamic_cast<AsasClosure*>(obj)) {
-        printf("Closure function: %s\n", str->getFunction()->getName().c_str());
-      } 
 #endif
       delete obj; 
       it = allocatedObjects_.erase(it); 
+      obj = nullptr;
     }
   }
 }
