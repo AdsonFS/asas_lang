@@ -50,12 +50,13 @@ static void runFile(const std::string &path) {
 
 int main(int argc, const char *argv[]) {
   // repl();
-  runFile("example/main.as");
-  return 0;
-  if (argc == 1)
-    repl();
-  else if (argc == 2)
-    runFile(argv[1]);
+  // runFile("example/main.as");
+  // if (argc == 1)
+  //   repl();
+  // else if (argc == 2)
+  //   runFile(argv[1]);
+  if (argc == 2)
+     runFile(argv[1]);
   else {
     fprintf(stderr, "Usage: asas [path]\n");
     exit(64);
